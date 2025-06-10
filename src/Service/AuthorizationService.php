@@ -215,7 +215,7 @@ class AuthorizationService
             }
 
             if (isset($challengeData['error'])) {
-                $challenge->setError(json_encode($challengeData['error']) ?: null);
+                $challenge->setError($challengeData['error']);
             }
 
             $this->entityManager->persist($challenge);

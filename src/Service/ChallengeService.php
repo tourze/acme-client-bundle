@@ -135,7 +135,7 @@ class ChallengeService
             }
 
             if (isset($response['error'])) {
-                $challenge->setError(json_encode($response['error']) ?: null);
+                $challenge->setError($response['error']);
             }
 
             $this->entityManager->persist($challenge);
@@ -179,7 +179,7 @@ class ChallengeService
             }
 
             if (isset($response['error'])) {
-                $challenge->setError(json_encode($response['error']) ?: null);
+                $challenge->setError($response['error']);
             }
 
             $this->entityManager->persist($challenge);

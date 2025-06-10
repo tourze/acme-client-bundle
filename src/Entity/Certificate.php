@@ -249,6 +249,10 @@ class Certificate implements \Stringable
      */
     public function isExpiringWithin(int $days = 30): bool
     {
+        if ($this->notAfterTime === null) {
+            return false;
+        }
+
         $threshold = new \DateTimeImmutable("+{$days} days");
         return $this->notAfterTime <= $threshold;
     }

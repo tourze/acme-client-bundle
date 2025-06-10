@@ -242,7 +242,7 @@ class Challenge implements \Stringable
      */
     public function calculateDnsRecordValue(): string
     {
-        if ($this->keyAuthorization === null) {
+        if (!isset($this->keyAuthorization)) {
             return '';
         }
 
