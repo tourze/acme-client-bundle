@@ -181,7 +181,7 @@ class CertificateServiceTest extends TestCase
             $this->assertIsString($csr);
             $this->assertStringContainsString('BEGIN CERTIFICATE REQUEST', $csr);
             $this->assertStringContainsString('END CERTIFICATE REQUEST', $csr);
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             // 如果生成失败，至少验证方法存在
             $this->assertTrue(method_exists($this->service, 'generateCsr'));
         }

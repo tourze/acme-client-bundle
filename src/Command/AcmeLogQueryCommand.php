@@ -100,7 +100,7 @@ class AcmeLogQueryCommand extends Command
         if ($sinceInput) {
             try {
                 $since = new \DateTimeImmutable($sinceInput);
-            } catch  (\Throwable $e) {
+            } catch (\Throwable $e) {
                 $io->error("无效的时间格式: {$sinceInput}");
                 return Command::FAILURE;
             }
@@ -277,7 +277,7 @@ class AcmeLogQueryCommand extends Command
         if ($sinceInput) {
             try {
                 $since = new \DateTimeImmutable($sinceInput);
-            } catch  (\Throwable $e) {
+            } catch (\Throwable $e) {
                 $io->error("无效的时间格式: {$sinceInput}");
                 return Command::FAILURE;
             }
