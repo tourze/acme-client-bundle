@@ -17,9 +17,9 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储签发的证书信息，包括证书内容、私钥、证书链等
  */
 #[ORM\Entity(repositoryClass: CertificateRepository::class)]
-#[ORM\Table(name: 'acme_certificates')]
-#[ORM\Index(columns: ['not_before'], name: 'idx_certificate_not_before')]
-#[ORM\Index(columns: ['not_after'], name: 'idx_certificate_not_after')]
+#[ORM\Table(name: 'acme_certificates', options: ['comment' => 'ACME 证书表，存储签发的证书信息'])]
+#[ORM\Index(columns: ['not_before_time'], name: 'idx_certificate_not_before')]
+#[ORM\Index(columns: ['not_after_time'], name: 'idx_certificate_not_after')]
 #[ORM\Index(columns: ['serial_number'], name: 'idx_certificate_serial')]
 class Certificate implements \Stringable
 {
@@ -27,7 +27,7 @@ class Certificate implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\OneToOne(targetEntity: Order::class, inversedBy: 'certificate')]
@@ -61,12 +61,12 @@ class Certificate implements \Stringable
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '颁发机构'])]
     private ?string $issuer = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '证书生效时间'])]
-    private ?\DateTimeInterface $notBeforeTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书生效时间'])]
+    private ?\DateTimeImmutable $notBeforeTime = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '证书过期时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书过期时间'])]
     #[IndexColumn]
-    private ?\DateTimeInterface $notAfterTime = null;
+    private ?\DateTimeImmutable $notAfterTime = null;
 
     #[ORM\Column(type: Types::JSON, options: ['comment' => '证书包含的域名列表'])]
     private array $domains = [];
@@ -179,23 +179,23 @@ class Certificate implements \Stringable
         return $this;
     }
 
-    public function getNotBeforeTime(): ?\DateTimeInterface
+    public function getNotBeforeTime(): ?\DateTimeImmutable
     {
         return $this->notBeforeTime;
     }
 
-    public function setNotBeforeTime(?\DateTimeInterface $notBeforeTime): static
+    public function setNotBeforeTime(?\DateTimeImmutable $notBeforeTime): static
     {
         $this->notBeforeTime = $notBeforeTime;
         return $this;
     }
 
-    public function getNotAfterTime(): ?\DateTimeInterface
+    public function getNotAfterTime(): ?\DateTimeImmutable
     {
         return $this->notAfterTime;
     }
 
-    public function setNotAfterTime(?\DateTimeInterface $notAfterTime): static
+    public function setNotAfterTime(?\DateTimeImmutable $notAfterTime): static
     {
         $this->notAfterTime = $notAfterTime;
         return $this;

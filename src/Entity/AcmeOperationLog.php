@@ -17,9 +17,9 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 记录所有 ACME 操作的详细日志，便于追踪和审计
  */
 #[ORM\Entity(repositoryClass: AcmeOperationLogRepository::class)]
-#[ORM\Table(name: 'acme_operation_logs')]
-#[ORM\Index(columns: ['operation_type'], name: 'idx_operation_type')]
-#[ORM\Index(columns: ['occurred_time'], name: 'idx_operation_occurred_time')]
+#[ORM\Table(name: 'acme_operation_logs', options: ['comment' => 'ACME 操作日志表，记录所有 ACME 操作的详细日志'])]
+#[ORM\Index(columns: ['operation'], name: 'idx_operation_type')]
+#[ORM\Index(columns: ['occurred_at'], name: 'idx_operation_occurred_time')]
 #[ORM\Index(columns: ['entity_type', 'entity_id'], name: 'idx_operation_entity')]
 #[ORM\Index(columns: ['level'], name: 'idx_operation_level')]
 class AcmeOperationLog implements \Stringable
@@ -28,7 +28,7 @@ class AcmeOperationLog implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: LogLevel::class, options: ['comment' => '日志级别'])]
@@ -67,6 +67,14 @@ class AcmeOperationLog implements \Stringable
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '操作是否成功'])]
     private bool $success = true;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '操作发生时间'])]
+    private \DateTimeImmutable $occurredAt;
+
+    public function __construct()
+    {
+        $this->occurredAt = new \DateTimeImmutable();
+    }
 
     public function __toString(): string
     {
@@ -196,6 +204,17 @@ class AcmeOperationLog implements \Stringable
     public function setSuccess(bool $success): static
     {
         $this->success = $success;
+        return $this;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
+
+    public function setOccurredAt(\DateTimeImmutable $occurredAt): static
+    {
+        $this->occurredAt = $occurredAt;
         return $this;
     }
 

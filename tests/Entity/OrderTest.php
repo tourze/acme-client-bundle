@@ -104,7 +104,7 @@ class OrderTest extends TestCase
     {
         $this->assertNull($this->order->getExpiresTime());
 
-        $expiry = new \DateTime('+7 days');
+        $expiry = new \DateTimeImmutable('+7 days');
         $result = $this->order->setExpiresTime($expiry);
 
         $this->assertSame($this->order, $result);
@@ -113,7 +113,7 @@ class OrderTest extends TestCase
 
     public function test_expiresTime_setToNull(): void
     {
-        $this->order->setExpiresTime(new \DateTime());
+        $this->order->setExpiresTime(new \DateTimeImmutable());
         $this->order->setExpiresTime(null);
 
         $this->assertNull($this->order->getExpiresTime());
@@ -269,7 +269,7 @@ class OrderTest extends TestCase
 
     public function test_isExpired_withFutureDate(): void
     {
-        $future = new \DateTime('+1 hour');
+        $future = new \DateTimeImmutable('+1 hour');
         $this->order->setExpiresTime($future);
 
         $this->assertFalse($this->order->isExpired());
@@ -277,7 +277,7 @@ class OrderTest extends TestCase
 
     public function test_isExpired_withPastDate(): void
     {
-        $past = new \DateTime('-1 hour');
+        $past = new \DateTimeImmutable('-1 hour');
         $this->order->setExpiresTime($past);
 
         $this->assertTrue($this->order->isExpired());
@@ -359,7 +359,7 @@ class OrderTest extends TestCase
         $orderUrl = 'https://acme-v02.api.letsencrypt.org/acme/order/123456';
         $finalizeUrl = 'https://acme-v02.api.letsencrypt.org/acme/finalize/123456';
         $certUrl = 'https://acme-v02.api.letsencrypt.org/acme/cert/123456';
-        $expiry = new \DateTime('+7 days');
+        $expiry = new \DateTimeImmutable('+7 days');
 
         $result = $this->order
             ->setAccount($account)
@@ -389,7 +389,7 @@ class OrderTest extends TestCase
             ->setAccount($account)
             ->setOrderUrl('https://acme-v02.api.letsencrypt.org/acme/order/123456')
             ->setStatus(OrderStatus::PENDING)
-            ->setExpiresTime(new \DateTime('+7 days'));
+            ->setExpiresTime(new \DateTimeImmutable('+7 days'));
 
         $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
         $this->assertFalse($this->order->isValid());
@@ -484,13 +484,13 @@ class OrderTest extends TestCase
     public function test_edgeCases_expiresTimeEdgeCase(): void
     {
         // 设置过期时间为1秒后，确保不会过期
-        $future = new \DateTime('+1 second');
+        $future = new \DateTimeImmutable('+1 second');
         $this->order->setExpiresTime($future);
 
         $this->assertFalse($this->order->isExpired());
 
         // 设置过期时间为1秒前，确保已过期
-        $past = new \DateTime('-1 second');
+        $past = new \DateTimeImmutable('-1 second');
         $this->order->setExpiresTime($past);
 
         $this->assertTrue($this->order->isExpired());

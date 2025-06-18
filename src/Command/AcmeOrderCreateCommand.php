@@ -28,6 +28,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
 )]
 class AcmeOrderCreateCommand extends Command
 {
+    public const NAME = 'acme:order:create';
     public function __construct(
         private readonly AccountService $accountService,
         private readonly OrderService $orderService,
@@ -67,8 +68,8 @@ class AcmeOrderCreateCommand extends Command
 
         $accountId = (int) $input->getArgument('account-id');
         $domainsInput = $input->getArgument('domains');
-        $waitValidation = $input->getOption('wait-validation');
-        $autoDownload = $input->getOption('auto-download');
+        $waitValidation = (bool) $input->getOption('wait-validation');
+        $autoDownload = (bool) $input->getOption('auto-download');
         $timeout = (int) $input->getOption('timeout');
 
         // 解析域名列表
@@ -95,7 +96,7 @@ class AcmeOrderCreateCommand extends Command
 
             // 查找账户
             $account = $this->accountService->getAccountById($accountId);
-            if (!$account) {
+            if ($account === null) {
                 $io->error("账户不存在 (ID: {$accountId})");
                 return Command::FAILURE;
             }
@@ -144,7 +145,7 @@ class AcmeOrderCreateCommand extends Command
 
                 // 获取DNS-01质询
                 $challenge = $this->challengeService->getDns01Challenge($authorization);
-                if (!$challenge) {
+                if ($challenge === null) {
                     $io->error("未找到DNS-01质询: {$authorization->getIdentifierValue()}");
                     return Command::FAILURE;
                 }
@@ -159,7 +160,7 @@ class AcmeOrderCreateCommand extends Command
             $io->success('所有DNS记录已设置，质询验证已启动');
 
             // 如果需要等待验证
-            if ($waitValidation) {
+            if ($waitValidation === true) {
                 $io->text("等待质询验证完成（超时: {$timeout}秒）...");
 
                 $startTime = time();
@@ -190,7 +191,7 @@ class AcmeOrderCreateCommand extends Command
                 $io->success('质询验证完成！');
 
                 // 如果需要自动下载证书
-                if ($autoDownload) {
+                if ($autoDownload === true) {
                     $io->text('正在完成订单...');
                     $order = $this->orderService->finalizeOrderWithAutoCSR($order);
 

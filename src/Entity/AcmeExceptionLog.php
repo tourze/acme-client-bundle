@@ -16,7 +16,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 记录所有 ACME 操作过程中发生的异常，便于排查问题
  */
 #[ORM\Entity(repositoryClass: AcmeExceptionLogRepository::class)]
-#[ORM\Table(name: 'acme_exception_logs')]
+#[ORM\Table(name: 'acme_exception_logs', options: ['comment' => 'ACME 异常日志表，记录所有 ACME 操作过程中发生的异常'])]
 #[ORM\Index(columns: ['exception_class'], name: 'idx_exception_class')]
 #[ORM\Index(columns: ['occurred_time'], name: 'idx_exception_occurred_time')]
 #[ORM\Index(columns: ['entity_type', 'entity_id'], name: 'idx_exception_entity')]
@@ -26,7 +26,7 @@ class AcmeExceptionLog implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '异常类名'])]
@@ -230,9 +230,9 @@ class AcmeExceptionLog implements \Stringable
     /**
      * 从异常对象创建日志实体
      */
-    public static function fromException(\Throwable $exception, ?string $entityType = null, ?int $entityId = null, ?array $context = null): static
+    public static function fromException(\Throwable $exception, ?string $entityType = null, ?int $entityId = null, ?array $context = null): self
     {
-        $log = new static();
+        $log = new self();
         $log->setExceptionClass(get_class($exception));
         $log->setMessage($exception->getMessage());
         $log->setCode($exception->getCode());

@@ -19,16 +19,16 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储证书订单信息，包括域名列表、状态、有效期等
  */
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
-#[ORM\Table(name: 'acme_orders')]
+#[ORM\Table(name: 'acme_orders', options: ['comment' => 'ACME 订单表，存储证书订单信息'])]
 #[ORM\Index(columns: ['status'], name: 'idx_order_status')]
-#[ORM\Index(columns: ['expires'], name: 'idx_order_expires')]
+#[ORM\Index(columns: ['expires_time'], name: 'idx_order_expires')]
 class Order implements \Stringable
 {
     use TimestampableAware;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Account::class, inversedBy: 'orders')]
@@ -43,9 +43,9 @@ class Order implements \Stringable
     #[IndexColumn]
     private OrderStatus $status = OrderStatus::PENDING;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '订单过期时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '订单过期时间'])]
     #[IndexColumn]
-    private ?\DateTimeInterface $expiresTime = null;
+    private ?\DateTimeImmutable $expiresTime = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '订单错误信息'])]
     private ?string $error = null;
@@ -131,12 +131,12 @@ class Order implements \Stringable
         return $this;
     }
 
-    public function getExpiresTime(): ?\DateTimeInterface
+    public function getExpiresTime(): ?\DateTimeImmutable
     {
         return $this->expiresTime;
     }
 
-    public function setExpiresTime(?\DateTimeInterface $expiresTime): static
+    public function setExpiresTime(?\DateTimeImmutable $expiresTime): static
     {
         $this->expiresTime = $expiresTime;
         return $this;
@@ -269,7 +269,7 @@ class Order implements \Stringable
      */
     public function isExpired(): bool
     {
-        return $this->expiresTime < new \DateTime();
+        return $this->expiresTime !== null && $this->expiresTime < new \DateTimeImmutable();
     }
 
     /**

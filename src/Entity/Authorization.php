@@ -19,17 +19,16 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储域名授权信息，包括状态、过期时间、关联的质询等
  */
 #[ORM\Entity(repositoryClass: AuthorizationRepository::class)]
-#[ORM\Table(name: 'acme_authorizations')]
+#[ORM\Table(name: 'acme_authorizations', options: ['comment' => 'ACME 授权表，存储域名授权信息'])]
 #[ORM\Index(columns: ['status'], name: 'idx_authorization_status')]
-#[ORM\Index(columns: ['expires'], name: 'idx_authorization_expires')]
-#[ORM\Index(columns: ['identifier_value'], name: 'idx_authorization_identifier')]
+#[ORM\Index(columns: ['expires_time'], name: 'idx_authorization_expires')]
 class Authorization implements \Stringable
 {
     use TimestampableAware;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     /**
@@ -55,9 +54,9 @@ class Authorization implements \Stringable
     #[IndexColumn]
     private AuthorizationStatus $status = AuthorizationStatus::PENDING;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '授权过期时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '授权过期时间'])]
     #[IndexColumn]
-    private ?\DateTimeInterface $expiresTime = null;
+    private ?\DateTimeImmutable $expiresTime = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '授权是否为通配符'])]
     private bool $wildcard = false;
@@ -133,12 +132,12 @@ class Authorization implements \Stringable
         return $this;
     }
 
-    public function getExpiresTime(): ?\DateTimeInterface
+    public function getExpiresTime(): ?\DateTimeImmutable
     {
         return $this->expiresTime;
     }
 
-    public function setExpiresTime(?\DateTimeInterface $expiresTime): static
+    public function setExpiresTime(?\DateTimeImmutable $expiresTime): static
     {
         $this->expiresTime = $expiresTime;
         return $this;
@@ -203,7 +202,7 @@ class Authorization implements \Stringable
     public function isExpired(): bool
     {
         return $this->status === AuthorizationStatus::EXPIRED ||
-            ($this->expiresTime !== null && $this->expiresTime < new \DateTime());
+            ($this->expiresTime !== null && $this->expiresTime < new \DateTimeImmutable());
     }
 
     public function isRevoked(): bool
@@ -214,5 +213,13 @@ class Authorization implements \Stringable
     public function isInvalid(): bool
     {
         return $this->status === AuthorizationStatus::INVALID;
+    }
+
+    /**
+     * 获取标识符值
+     */
+    public function getIdentifierValue(): ?string
+    {
+        return $this->identifier?->getValue();
     }
 }

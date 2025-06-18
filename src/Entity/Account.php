@@ -19,7 +19,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储 ACME 服务提供商的账户信息，包括私钥、状态、联系信息等
  */
 #[ORM\Entity(repositoryClass: AccountRepository::class)]
-#[ORM\Table(name: 'acme_accounts')]
+#[ORM\Table(name: 'acme_accounts', options: ['comment' => 'ACME 账户表，存储 ACME 服务提供商的账户信息'])]
 #[ORM\Index(columns: ['status'], name: 'idx_account_status')]
 #[ORM\Index(columns: ['acme_server_url'], name: 'idx_account_server')]
 class Account implements \Stringable
@@ -28,7 +28,7 @@ class Account implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, options: ['comment' => 'ACME 服务器 URL'])]

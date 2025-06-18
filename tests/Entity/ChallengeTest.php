@@ -159,7 +159,7 @@ class ChallengeTest extends TestCase
     {
         $this->assertNull($this->challenge->getValidatedTime());
 
-        $validatedTime = new \DateTime();
+        $validatedTime = new \DateTimeImmutable();
         $result = $this->challenge->setValidatedTime($validatedTime);
 
         $this->assertSame($this->challenge, $result);
@@ -168,7 +168,7 @@ class ChallengeTest extends TestCase
 
     public function test_validatedTime_setToNull(): void
     {
-        $this->challenge->setValidatedTime(new \DateTime());
+        $this->challenge->setValidatedTime(new \DateTimeImmutable());
         $this->challenge->setValidatedTime(null);
 
         $this->assertNull($this->challenge->getValidatedTime());
@@ -296,7 +296,7 @@ class ChallengeTest extends TestCase
         $keyAuth = 'test_token_123.test_key_auth';
         $dnsName = '_acme-challenge.example.com';
         $dnsValue = 'test_dns_value';
-        $validatedTime = new \DateTime();
+        $validatedTime = new \DateTimeImmutable();
         $error = ['type' => 'test', 'detail' => 'test error'];
 
         $result = $this->challenge
@@ -386,7 +386,7 @@ class ChallengeTest extends TestCase
         // 验证成功
         $this->challenge
             ->setStatus(ChallengeStatus::VALID)
-            ->setValidatedTime(new \DateTime());
+            ->setValidatedTime(new \DateTimeImmutable());
 
         $this->assertTrue($this->challenge->isValid());
         $this->assertFalse($this->challenge->isProcessing());

@@ -24,6 +24,7 @@ use Tourze\ACMEClientBundle\Service\AcmeLogService;
 )]
 class AcmeAccountRegisterCommand extends Command
 {
+    public const NAME = 'acme:account:register';
     public function __construct(
         private readonly AccountService $accountService,
         private readonly AcmeLogService $logService
@@ -72,7 +73,7 @@ class AcmeAccountRegisterCommand extends Command
 
             // 检查是否已存在账户
             $existingAccount = $this->accountService->findAccountByEmail($email, $directoryUrl);
-            if ($existingAccount) {
+            if ($existingAccount !== null) {
                 $io->warning("账户已存在 (ID: {$existingAccount->getId()})");
                 $io->table(
                     ['字段', '值'],
@@ -88,7 +89,7 @@ class AcmeAccountRegisterCommand extends Command
             }
 
             // 确认服务条款
-            if (!$agreeTos) {
+            if ($agreeTos !== true) {
                 if (!$io->confirm('您需要同意ACME服务条款才能继续注册，是否同意？', false)) {
                     $io->info('用户取消注册');
                     return Command::FAILURE;

@@ -84,11 +84,11 @@ class AcmeRateLimitExceptionTest extends TestCase
 
     public function test_exception_with_retry_after_datetime_mutable(): void
     {
-        $retryAfter = new \DateTime('+30 minutes');
+        $retryAfter = new \DateTimeImmutable('+30 minutes');
         $exception = new AcmeRateLimitException('Rate limit', 429, null, 'rateLimited', null, $retryAfter);
 
         $this->assertSame($retryAfter, $exception->getRetryAfter());
-        $this->assertInstanceOf(\DateTime::class, $exception->getRetryAfter());
+        $this->assertInstanceOf(\DateTimeImmutable::class, $exception->getRetryAfter());
     }
 
     public function test_exception_with_all_parameters(): void

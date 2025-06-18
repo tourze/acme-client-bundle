@@ -16,7 +16,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储订单中的域名标识信息
  */
 #[ORM\Entity(repositoryClass: IdentifierRepository::class)]
-#[ORM\Table(name: 'acme_identifiers')]
+#[ORM\Table(name: 'acme_identifiers', options: ['comment' => 'ACME 标识符表，存储订单中的域名标识信息'])]
 #[ORM\Index(columns: ['type'], name: 'idx_identifier_type')]
 #[ORM\Index(columns: ['value'], name: 'idx_identifier_value')]
 class Identifier implements \Stringable
@@ -25,7 +25,7 @@ class Identifier implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     /**

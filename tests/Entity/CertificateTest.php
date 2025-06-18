@@ -191,7 +191,7 @@ class CertificateTest extends TestCase
     {
         $this->assertNull($this->certificate->getNotBeforeTime());
 
-        $notBefore = new \DateTime('-1 day');
+        $notBefore = new \DateTimeImmutable('-1 day');
         $result = $this->certificate->setNotBeforeTime($notBefore);
 
         $this->assertSame($this->certificate, $result);
@@ -200,7 +200,7 @@ class CertificateTest extends TestCase
 
     public function test_notBeforeTime_setToNull(): void
     {
-        $this->certificate->setNotBeforeTime(new \DateTime());
+        $this->certificate->setNotBeforeTime(new \DateTimeImmutable());
         $this->certificate->setNotBeforeTime(null);
 
         $this->assertNull($this->certificate->getNotBeforeTime());
@@ -210,7 +210,7 @@ class CertificateTest extends TestCase
     {
         $this->assertNull($this->certificate->getNotAfterTime());
 
-        $notAfter = new \DateTime('+90 days');
+        $notAfter = new \DateTimeImmutable('+90 days');
         $result = $this->certificate->setNotAfterTime($notAfter);
 
         $this->assertSame($this->certificate, $result);
@@ -219,7 +219,7 @@ class CertificateTest extends TestCase
 
     public function test_notAfterTime_setToNull(): void
     {
-        $this->certificate->setNotAfterTime(new \DateTime());
+        $this->certificate->setNotAfterTime(new \DateTimeImmutable());
         $this->certificate->setNotAfterTime(null);
 
         $this->assertNull($this->certificate->getNotAfterTime());
@@ -283,14 +283,14 @@ class CertificateTest extends TestCase
 
     public function test_isExpired_withFutureDate(): void
     {
-        $futureDate = new \DateTime('+30 days');
+        $futureDate = new \DateTimeImmutable('+30 days');
         $this->certificate->setNotAfterTime($futureDate);
         $this->assertFalse($this->certificate->isExpired());
     }
 
     public function test_isExpired_withPastDate(): void
     {
-        $pastDate = new \DateTime('-1 day');
+        $pastDate = new \DateTimeImmutable('-1 day');
         $this->certificate->setNotAfterTime($pastDate);
         $this->assertTrue($this->certificate->isExpired());
     }
@@ -309,18 +309,18 @@ class CertificateTest extends TestCase
     public function test_isExpiringWithin_defaultDays(): void
     {
         // 默认 30 天
-        $notAfter = new \DateTime('+20 days');
+        $notAfter = new \DateTimeImmutable('+20 days');
         $this->certificate->setNotAfterTime($notAfter);
         $this->assertTrue($this->certificate->isExpiringWithin());
 
-        $notAfter = new \DateTime('+40 days');
+        $notAfter = new \DateTimeImmutable('+40 days');
         $this->certificate->setNotAfterTime($notAfter);
         $this->assertFalse($this->certificate->isExpiringWithin());
     }
 
     public function test_isExpiringWithin_customDays(): void
     {
-        $notAfter = new \DateTime('+10 days');
+        $notAfter = new \DateTimeImmutable('+10 days');
         $this->certificate->setNotAfterTime($notAfter);
 
         $this->assertTrue($this->certificate->isExpiringWithin(15));
@@ -342,7 +342,7 @@ class CertificateTest extends TestCase
     public function test_getDaysUntilExpiry_withFutureDate(): void
     {
         // 设置一个确定的未来日期来避免时间相关的测试问题
-        $futureDate = new \DateTime('+30 days');
+        $futureDate = new \DateTimeImmutable('+30 days');
         $this->certificate->setNotAfterTime($futureDate);
 
         $days = $this->certificate->getDaysUntilExpiry();
@@ -353,7 +353,7 @@ class CertificateTest extends TestCase
 
     public function test_getDaysUntilExpiry_withPastDate(): void
     {
-        $pastDate = new \DateTime('-5 days');
+        $pastDate = new \DateTimeImmutable('-5 days');
         $this->certificate->setNotAfterTime($pastDate);
 
         $days = $this->certificate->getDaysUntilExpiry();
@@ -429,8 +429,8 @@ class CertificateTest extends TestCase
         $serialNumber = 'ABC123';
         $fingerprint = 'SHA256:test';
         $domains = ['example.com'];
-        $notBefore = new \DateTime('-1 day');
-        $notAfter = new \DateTime('+90 days');
+        $notBefore = new \DateTimeImmutable('-1 day');
+        $notAfter = new \DateTimeImmutable('+90 days');
         $issuer = 'Test CA';
         $revokedTime = new \DateTimeImmutable();
 
@@ -476,8 +476,8 @@ class CertificateTest extends TestCase
             ->setCertificatePem("-----BEGIN CERTIFICATE-----\nValid Cert\n-----END CERTIFICATE-----")
             ->setSerialNumber('12345678901234567890')
             ->setDomains(['example.com', 'www.example.com'])
-            ->setNotBeforeTime(new \DateTime('-1 day'))
-            ->setNotAfterTime(new \DateTime('+90 days'))
+            ->setNotBeforeTime(new \DateTimeImmutable('-1 day'))
+            ->setNotAfterTime(new \DateTimeImmutable('+90 days'))
             ->setIssuer('CN=Let\'s Encrypt Authority X3');
 
         $this->assertSame(CertificateStatus::VALID, $this->certificate->getStatus());
@@ -491,7 +491,7 @@ class CertificateTest extends TestCase
     {
         $this->certificate
             ->setStatus(CertificateStatus::EXPIRED)
-            ->setNotAfterTime(new \DateTime('-10 days'));
+            ->setNotAfterTime(new \DateTimeImmutable('-10 days'));
 
         $this->assertSame(CertificateStatus::EXPIRED, $this->certificate->getStatus());
         $this->assertFalse($this->certificate->isValid());
@@ -516,7 +516,7 @@ class CertificateTest extends TestCase
     public function test_businessScenario_certificateRenewal(): void
     {
         // 证书即将过期，需要更新
-        $notAfter = new \DateTime('+15 days');
+        $notAfter = new \DateTimeImmutable('+15 days');
         $this->certificate->setNotAfterTime($notAfter);
 
         $this->assertTrue($this->certificate->isExpiringWithin(30));
@@ -607,7 +607,7 @@ class CertificateTest extends TestCase
     public function test_timeRelatedMethods_edgeCases(): void
     {
         // 测试时间边界情况
-        $now = new \DateTime();
+        $now = new \DateTimeImmutable();
         $this->certificate->setNotAfterTime($now);
 
         // 由于时间精度问题，这个测试可能会有微小差异

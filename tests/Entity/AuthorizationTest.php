@@ -119,7 +119,7 @@ class AuthorizationTest extends TestCase
     {
         $this->assertNull($this->authorization->getExpiresTime());
 
-        $expiry = new \DateTime('+30 days');
+        $expiry = new \DateTimeImmutable('+30 days');
         $result = $this->authorization->setExpiresTime($expiry);
 
         $this->assertSame($this->authorization, $result);
@@ -128,7 +128,7 @@ class AuthorizationTest extends TestCase
 
     public function test_expiresTime_setToNull(): void
     {
-        $this->authorization->setExpiresTime(new \DateTime());
+        $this->authorization->setExpiresTime(new \DateTimeImmutable());
         $this->authorization->setExpiresTime(null);
 
         $this->assertNull($this->authorization->getExpiresTime());
@@ -220,12 +220,12 @@ class AuthorizationTest extends TestCase
     public function test_isExpired_withTime(): void
     {
         // 未过期的时间
-        $future = new \DateTime('+1 hour');
+        $future = new \DateTimeImmutable('+1 hour');
         $this->authorization->setExpiresTime($future);
         $this->assertFalse($this->authorization->isExpired());
 
         // 已过期的时间
-        $past = new \DateTime('-1 hour');
+        $past = new \DateTimeImmutable('-1 hour');
         $this->authorization->setExpiresTime($past);
         $this->assertTrue($this->authorization->isExpired());
     }
@@ -233,7 +233,7 @@ class AuthorizationTest extends TestCase
     public function test_isExpired_statusOverridesTime(): void
     {
         // 即使时间未过期，但状态为 EXPIRED，仍然返回 true
-        $future = new \DateTime('+1 hour');
+        $future = new \DateTimeImmutable('+1 hour');
         $this->authorization
             ->setExpiresTime($future)
             ->setStatus(AuthorizationStatus::EXPIRED);
@@ -291,7 +291,7 @@ class AuthorizationTest extends TestCase
         /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
         $url = 'https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456';
-        $expiry = new \DateTime('+30 days');
+        $expiry = new \DateTimeImmutable('+30 days');
 
         $result = $this->authorization
             ->setOrder($order)
@@ -324,7 +324,7 @@ class AuthorizationTest extends TestCase
             ->setIdentifier($identifier)
             ->setAuthorizationUrl('https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456')
             ->setStatus(AuthorizationStatus::PENDING)
-            ->setExpiresTime(new \DateTime('+30 days'));
+            ->setExpiresTime(new \DateTimeImmutable('+30 days'));
 
         $this->assertTrue($this->authorization->isPending());
         $this->assertFalse($this->authorization->isValid());

@@ -22,6 +22,7 @@ use Tourze\ACMEClientBundle\Service\AcmeLogService;
 )]
 class AcmeLogQueryCommand extends Command
 {
+    public const NAME = 'acme:log:query';
     public function __construct(
         private readonly AcmeLogService $logService,
         private readonly AcmeExceptionService $exceptionService
@@ -77,27 +78,27 @@ class AcmeLogQueryCommand extends Command
         $type = $input->getOption('type');
         $operation = $input->getOption('operation');
         $entityType = $input->getOption('entity-type');
-        $entityId = $input->getOption('entity-id') ? (int) $input->getOption('entity-id') : null;
+        $entityId = $input->getOption('entity-id') !== null ? (int) $input->getOption('entity-id') : null;
         $level = $input->getOption('level');
         $limit = (int) $input->getOption('limit');
         $sinceInput = $input->getOption('since');
-        $showStats = $input->getOption('stats');
+        $showStats = (bool) $input->getOption('stats');
         $cleanup = $input->getOption('cleanup');
 
         // 处理清理操作
-        if ($cleanup !== null) {
+        if ($cleanup !== null && $cleanup !== false) {
             $cleanupDays = (int) $cleanup;
             return $this->handleCleanup($io, $cleanupDays);
         }
 
         // 处理统计信息
-        if ($showStats) {
+        if ($showStats === true) {
             return $this->handleStats($io, $type, $sinceInput);
         }
 
         // 解析起始时间
         $since = null;
-        if ($sinceInput) {
+        if ($sinceInput !== null) {
             try {
                 $since = new \DateTimeImmutable($sinceInput);
             } catch (\Throwable $e) {
@@ -131,7 +132,7 @@ class AcmeLogQueryCommand extends Command
     ): int {
         $logs = $this->logService->findLogs($operation, $entityType, $entityId, $level, $limit);
 
-        if ($since) {
+        if ($since !== null) {
             $logs = array_filter($logs, fn($log) => $log->getOccurredAt() >= $since);
         }
 
@@ -144,11 +145,11 @@ class AcmeLogQueryCommand extends Command
 
         // 显示查询条件
         $conditions = [];
-        if ($operation) $conditions[] = "操作: {$operation}";
-        if ($entityType) $conditions[] = "实体类型: {$entityType}";
-        if ($entityId) $conditions[] = "实体ID: {$entityId}";
-        if ($level) $conditions[] = "级别: {$level}";
-        if ($since) $conditions[] = "起始时间: " . $since->format('Y-m-d H:i:s');
+        if ($operation !== null) $conditions[] = "操作: {$operation}";
+        if ($entityType !== null) $conditions[] = "实体类型: {$entityType}";
+        if ($entityId !== null) $conditions[] = "实体ID: {$entityId}";
+        if ($level !== null) $conditions[] = "级别: {$level}";
+        if ($since !== null) $conditions[] = "起始时间: " . $since->format('Y-m-d H:i:s');
 
         if (!empty($conditions)) {
             $io->text("查询条件: " . implode(', ', $conditions));
@@ -214,9 +215,9 @@ class AcmeLogQueryCommand extends Command
 
         // 显示查询条件
         $conditions = [];
-        if ($entityType) $conditions[] = "实体类型: {$entityType}";
-        if ($entityId) $conditions[] = "实体ID: {$entityId}";
-        if ($since) $conditions[] = "起始时间: " . $since->format('Y-m-d H:i:s');
+        if ($entityType !== null) $conditions[] = "实体类型: {$entityType}";
+        if ($entityId !== null) $conditions[] = "实体ID: {$entityId}";
+        if ($since !== null) $conditions[] = "起始时间: " . $since->format('Y-m-d H:i:s');
 
         if (!empty($conditions)) {
             $io->text("查询条件: " . implode(', ', $conditions));
@@ -252,12 +253,12 @@ class AcmeLogQueryCommand extends Command
                     ['发生时间', $exception->getOccurredAt()->format('Y-m-d H:i:s')]
                 );
 
-                if ($exception->getStackTrace()) {
+                if ($exception->getStackTrace() !== null) {
                     $io->text('<comment>堆栈跟踪:</comment>');
                     $io->text($exception->getStackTrace());
                 }
 
-                if ($exception->getContext()) {
+                if ($exception->getContext() !== null) {
                     $io->text('<comment>上下文信息:</comment>');
                     $io->text(json_encode($exception->getContext(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                 }
@@ -274,7 +275,7 @@ class AcmeLogQueryCommand extends Command
     private function handleStats(SymfonyStyle $io, string $type, ?string $sinceInput): int
     {
         $since = null;
-        if ($sinceInput) {
+        if ($sinceInput !== null) {
             try {
                 $since = new \DateTimeImmutable($sinceInput);
             } catch (\Throwable $e) {
@@ -320,7 +321,7 @@ class AcmeLogQueryCommand extends Command
             foreach ($logs as $log) {
                 $operationStats[$log->getOperationType()] = ($operationStats[$log->getOperationType()] ?? 0) + 1;
                 $levelStats[$log->getLevel()] = ($levelStats[$log->getLevel()] ?? 0) + 1;
-                if ($log->getEntityType()) {
+                if ($log->getEntityType() !== null) {
                     $entityStats[$log->getEntityType()] = ($entityStats[$log->getEntityType()] ?? 0) + 1;
                 }
             }

@@ -18,7 +18,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  * 存储质询信息，只实现 DNS-01 类型
  */
 #[ORM\Entity(repositoryClass: ChallengeRepository::class)]
-#[ORM\Table(name: 'acme_challenges')]
+#[ORM\Table(name: 'acme_challenges', options: ['comment' => 'ACME 质询表，存储质询信息'])]
 #[ORM\Index(columns: ['type'], name: 'idx_challenge_type')]
 #[ORM\Index(columns: ['status'], name: 'idx_challenge_status')]
 #[ORM\Index(columns: ['token'], name: 'idx_challenge_token')]
@@ -28,7 +28,7 @@ class Challenge implements \Stringable
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Authorization::class, inversedBy: 'challenges')]
@@ -60,8 +60,8 @@ class Challenge implements \Stringable
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => 'DNS 记录值'])]
     private ?string $dnsRecordValue = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '质询验证时间'])]
-    private ?\DateTimeInterface $validatedTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '质询验证时间'])]
+    private ?\DateTimeImmutable $validatedTime = null;
 
     #[ORM\Column(type: Types::JSON, nullable: true, options: ['comment' => '质询错误信息'])]
     private ?array $error = null;
@@ -168,12 +168,12 @@ class Challenge implements \Stringable
         return $this;
     }
 
-    public function getValidatedTime(): ?\DateTimeInterface
+    public function getValidatedTime(): ?\DateTimeImmutable
     {
         return $this->validatedTime;
     }
 
-    public function setValidatedTime(?\DateTimeInterface $validatedTime): static
+    public function setValidatedTime(?\DateTimeImmutable $validatedTime): static
     {
         $this->validatedTime = $validatedTime;
         return $this;

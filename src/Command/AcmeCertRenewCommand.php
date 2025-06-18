@@ -26,6 +26,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
 )]
 class AcmeCertRenewCommand extends Command
 {
+    public const NAME = 'acme:cert:renew';
     public function __construct(
         private readonly CertificateService $certificateService,
         private readonly OrderService $orderService,
@@ -65,22 +66,22 @@ class AcmeCertRenewCommand extends Command
 
         $certificateId = $input->getArgument('certificate-id');
         $daysBeforeExpiry = (int) $input->getOption('days-before-expiry');
-        $force = $input->getOption('force');
-        $dryRun = $input->getOption('dry-run');
+        $force = (bool) $input->getOption('force');
+        $dryRun = (bool) $input->getOption('dry-run');
 
         try {
             $io->section('ACME 证书续订');
 
-            if ($dryRun) {
+            if ($dryRun === true) {
                 $io->note('模拟运行模式 - 不会执行实际的续订操作');
             }
 
             $certificates = [];
 
-            if ($certificateId) {
+            if ($certificateId !== null) {
                 // 续订指定证书
                 $certificate = $this->certificateRepository->find((int) $certificateId);
-                if (!$certificate) {
+                if ($certificate === null) {
                     $io->error("证书不存在 (ID: {$certificateId})");
                     return Command::FAILURE;
                 }
@@ -112,7 +113,7 @@ class AcmeCertRenewCommand extends Command
                 }
 
                 $daysToExpiry = null;
-                if ($certificate->getNotAfterTime()) {
+                if ($certificate->getNotAfterTime() !== null) {
                     $now = new \DateTimeImmutable();
                     $expiry = $certificate->getNotAfterTime();
                     $diff = $now->diff($expiry);
@@ -133,7 +134,7 @@ class AcmeCertRenewCommand extends Command
                 $tableData
             );
 
-            if ($dryRun) {
+            if ($dryRun === true) {
                 $io->note('模拟运行完成 - 以上证书需要续订');
                 return Command::SUCCESS;
             }
