@@ -39,7 +39,8 @@ class CertificateTest extends TestCase
     }
 
     public function test_order_getterSetter(): void
-    {        $order = $this->createMock(Order::class);
+    {
+        $order = $this->createMock(Order::class);
         $result = $this->certificate->setOrder($order);
 
         $this->assertSame($this->certificate, $result);
@@ -47,7 +48,8 @@ class CertificateTest extends TestCase
     }
 
     public function test_order_setToNull(): void
-    {        $order = $this->createMock(Order::class);
+    {
+        $order = $this->createMock(Order::class);
         $this->certificate->setOrder($order);
 
         $this->certificate->setOrder(null);
@@ -416,7 +418,8 @@ class CertificateTest extends TestCase
     }
 
     public function test_fluentInterface_chaining(): void
-    {        $order = $this->createMock(Order::class);
+    {
+        $order = $this->createMock(Order::class);
         $certificatePem = "-----BEGIN CERTIFICATE-----\nTest\n-----END CERTIFICATE-----";
         $chainPem = "-----BEGIN CERTIFICATE-----\nChain\n-----END CERTIFICATE-----";
         $privateKey = "-----BEGIN PRIVATE KEY-----\nKey\n-----END PRIVATE KEY-----";
@@ -460,7 +463,8 @@ class CertificateTest extends TestCase
     }
 
     public function test_businessScenario_certificateIssuance(): void
-    {        $order = $this->createMock(Order::class);
+    {
+        $order = $this->createMock(Order::class);
 
         $this->certificate
             ->setOrder($order)
@@ -604,7 +608,7 @@ class CertificateTest extends TestCase
 
         // 由于时间精度问题，这个测试可能会有微小差异
         $isExpired = $this->certificate->isExpired();
-        $this->assertTrue($isExpired || !$isExpired); // 接受任一结果，因为时间可能刚好在边界
+        $this->assertIsBool($isExpired); // 验证返回布尔类型
 
         $days = $this->certificate->getDaysUntilExpiry();
         $this->assertIsInt($days);

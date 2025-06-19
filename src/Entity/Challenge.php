@@ -222,7 +222,9 @@ class Challenge implements \Stringable
      */
     public function isDns01(): bool
     {
-        return $this->type === ChallengeType::DNS_01;
+        return match ($this->type) {
+            ChallengeType::DNS_01 => true,
+        };
     }
 
     /**

@@ -34,9 +34,9 @@ class ChallengeService
      */
     public function prepareDnsChallenge(Challenge $challenge): Challenge
     {
-        if ($challenge->getType() !== ChallengeType::DNS_01) {
-            throw new AcmeClientException('Only DNS-01 challenges are supported');
-        }
+        match ($challenge->getType()) {
+            ChallengeType::DNS_01 => null,
+        };
 
         $authorization = $challenge->getAuthorization();
         $order = $authorization->getOrder();
@@ -100,9 +100,9 @@ class ChallengeService
      */
     public function respondToChallenge(Challenge $challenge): Challenge
     {
-        if ($challenge->getType() !== ChallengeType::DNS_01) {
-            throw new AcmeClientException('Only DNS-01 challenges are supported');
-        }
+        match ($challenge->getType()) {
+            ChallengeType::DNS_01 => null,
+        };
 
         $authorization = $challenge->getAuthorization();
         $order = $authorization->getOrder();
@@ -213,7 +213,7 @@ class ChallengeService
         // TODO: 集成DNS提供商来删除DNS记录
         // try {
         //     $this->deleteDnsRecord($recordName, $recordValue);
-        //     
+        //
         //     $this->logger->info('DNS record cleaned up successfully', [
         //         'challenge_id' => $challenge->getId(),
         //         'record_name' => $recordName,
@@ -224,7 +224,7 @@ class ChallengeService
         //         'record_name' => $recordName,
         //         'error' => $e->getMessage(),
         //     ]);
-        //     
+        //
         //     // 清理失败不应该阻止整个流程
         // }
 
