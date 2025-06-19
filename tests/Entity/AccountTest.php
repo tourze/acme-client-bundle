@@ -152,9 +152,7 @@ class AccountTest extends TestCase
     }
 
     public function test_addOrder(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
 
         $result = $this->account->addOrder($order);
 
@@ -164,9 +162,7 @@ class AccountTest extends TestCase
     }
 
     public function test_addOrder_preventDuplicates(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
 
         // 添加同一个订单两次
         $this->account->addOrder($order);
@@ -178,9 +174,7 @@ class AccountTest extends TestCase
     }
 
     public function test_removeOrder(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
 
         // 先添加订单
         $this->account->getOrders()->add($order);
@@ -195,11 +189,7 @@ class AccountTest extends TestCase
     }
 
     public function test_removeOrder_notOwnedByAccount(): void
-    {
-        /** @var Order $order1 */
-        $order1 = $this->createMock(Order::class);
-        /** @var Order $order2 */
-        $order2 = $this->createMock(Order::class);
+    {        $order1 = $this->createMock(Order::class);        $order2 = $this->createMock(Order::class);
 
         $this->account->getOrders()->add($order1);
         $this->account->removeOrder($order2); // 移除不存在的订单
@@ -325,13 +315,7 @@ class AccountTest extends TestCase
     }
 
     public function test_businessScenario_multipleOrders(): void
-    {
-        /** @var Order $order1 */
-        $order1 = $this->createMock(Order::class);
-        /** @var Order $order2 */
-        $order2 = $this->createMock(Order::class);
-        /** @var Order $order3 */
-        $order3 = $this->createMock(Order::class);
+    {        $order1 = $this->createMock(Order::class);        $order2 = $this->createMock(Order::class);        $order3 = $this->createMock(Order::class);
 
         $this->account
             ->addOrder($order1)

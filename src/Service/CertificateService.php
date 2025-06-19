@@ -31,7 +31,7 @@ class CertificateService
      */
     public function downloadCertificate(Order $order): Certificate
     {
-        if (!$order->getCertificateUrl()) {
+        if ($order->getCertificateUrl() === null) {
             throw new AcmeClientException('Certificate URL not available in order');
         }
 
@@ -67,7 +67,7 @@ class CertificateService
 
             // 创建或更新证书实体
             $certificate = $order->getCertificate();
-            if (!$certificate) {
+            if ($certificate === null) {
                 $certificate = new Certificate();
                 $certificate->setOrder($order);
             }
@@ -178,7 +178,7 @@ class CertificateService
             }
 
             // 验证证书链（如果有）
-            if ($certificate->getCertificateChainPem()) {
+            if ($certificate->getCertificateChainPem() !== null) {
                 return $this->validateCertificateChain($certificate);
             }
 

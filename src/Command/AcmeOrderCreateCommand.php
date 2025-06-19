@@ -23,7 +23,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
  * ACME 证书订单创建命令
  */
 #[AsCommand(
-    name: 'acme:order:create',
+    name: self::NAME,
     description: '创建ACME证书订单并完成DNS-01质询',
 )]
 class AcmeOrderCreateCommand extends Command

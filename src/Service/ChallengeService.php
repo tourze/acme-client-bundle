@@ -43,12 +43,12 @@ class ChallengeService
         $account = $order->getAccount();
 
         $domain = $authorization->getIdentifier()?->getValue();
-        if (!$domain) {
+        if ($domain === null) {
             throw new AcmeClientException('Domain not found in authorization');
         }
 
         $token = $challenge->getToken();
-        if (!$token) {
+        if ($token === '') {
             throw new AcmeClientException('Challenge token not found');
         }
 
@@ -109,7 +109,7 @@ class ChallengeService
         $account = $order->getAccount();
 
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
-        if (!$privateKey || !$challenge->getChallengeUrl()) {
+        if ($privateKey === false || $challenge->getChallengeUrl() === '') {
             throw new AcmeClientException('Invalid challenge or account data');
         }
 
@@ -161,7 +161,7 @@ class ChallengeService
      */
     public function checkChallengeStatus(Challenge $challenge): Challenge
     {
-        if (!$challenge->getChallengeUrl()) {
+        if ($challenge->getChallengeUrl() === '') {
             throw new AcmeClientException('Challenge URL not found');
         }
 
@@ -203,7 +203,7 @@ class ChallengeService
         $recordName = $challenge->getDnsRecordName();
         $recordValue = $challenge->getDnsRecordValue();
 
-        if (!$recordName || !$recordValue) {
+        if ($recordName === null || $recordValue === null) {
             $this->logger->warning('DNS record name or value not found for cleanup', [
                 'challenge_id' => $challenge->getId(),
             ]);

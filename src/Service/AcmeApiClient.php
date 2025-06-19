@@ -86,7 +86,7 @@ class AcmeApiClient
                 $response = $this->httpClient->request('HEAD', $newNonceUrl);
                 $this->currentNonce = $response->getHeaders()['replay-nonce'][0] ?? null;
 
-                if (!$this->currentNonce) {
+                if ($this->currentNonce === null) {
                     throw new AcmeClientException('No nonce received from server');
                 }
 
@@ -234,7 +234,7 @@ class AcmeApiClient
             'url' => $url,
         ];
 
-        if ($kid) {
+        if ($kid !== null) {
             $protected['kid'] = $kid;
         } else {
             $protected['jwk'] = $this->createJwk($accountKey);

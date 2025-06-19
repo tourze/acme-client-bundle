@@ -149,22 +149,22 @@ class AcmeLogService
             ->orderBy('l.occurredTime', 'DESC')
             ->setMaxResults($limit);
 
-        if ($operation) {
+        if ($operation !== null) {
             $qb->andWhere('l.operation = :operation')
                 ->setParameter('operation', $operation);
         }
 
-        if ($entityType) {
+        if ($entityType !== null) {
             $qb->andWhere('l.entityType = :entityType')
                 ->setParameter('entityType', $entityType);
         }
 
-        if ($entityId) {
+        if ($entityId !== null) {
             $qb->andWhere('l.entityId = :entityId')
                 ->setParameter('entityId', $entityId);
         }
 
-        if ($level) {
+        if ($level !== null) {
             $qb->andWhere('l.level = :level')
                 ->setParameter('level', $level);
         }

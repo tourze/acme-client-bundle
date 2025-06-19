@@ -111,8 +111,7 @@ class CertificateServiceTest extends TestCase
             ->method('post')
             ->with(
                 'revokeCert',
-                $this->callback(fn($payload) => 
-                    isset($payload['certificate']) && 
+                $this->callback(fn($payload) => isset($payload['certificate']) &&
                     isset($payload['reason']) &&
                     $payload['reason'] === 0
                 ),
@@ -174,11 +173,9 @@ class CertificateServiceTest extends TestCase
     {
         $domains = ['example.com', 'www.example.com'];
         $privateKey = $this->generateTestPrivateKey();
-        
+
         try {
             $csr = $this->service->generateCsr($domains, $privateKey);
-            
-            $this->assertIsString($csr);
             $this->assertStringContainsString('BEGIN CERTIFICATE REQUEST', $csr);
             $this->assertStringContainsString('END CERTIFICATE REQUEST', $csr);
         } catch (\Throwable $e) {

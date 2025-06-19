@@ -59,8 +59,6 @@ class AcmeExceptionLog implements \Stringable
     #[ORM\Column(type: Types::JSON, nullable: true, options: ['comment' => '异常上下文信息'])]
     private ?array $context = null;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '异常发生时间'])]
-    private \DateTimeImmutable $occurredTime;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => 'HTTP 请求 URL'])]
     private ?string $httpUrl = null;
@@ -252,7 +250,7 @@ class AcmeExceptionLog implements \Stringable
     public function getShortDescription(): string
     {
         $description = $this->exceptionClass . ': ' . $this->message;
-        if ($this->file && $this->line) {
+        if ($this->file !== null && $this->line !== null) {
             $description .= ' in ' . basename($this->file) . ':' . $this->line;
         }
         return $description;

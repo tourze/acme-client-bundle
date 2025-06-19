@@ -98,7 +98,7 @@ class AccountService
             throw new AcmeClientException('Invalid account private key');
         }
 
-        if (!$account->getAccountUrl()) {
+        if ($account->getAccountUrl() === null) {
             throw new AcmeClientException('Account URL not found');
         }
 
@@ -131,7 +131,7 @@ class AccountService
             throw new AcmeClientException('Invalid account private key');
         }
 
-        if (!$account->getAccountUrl()) {
+        if ($account->getAccountUrl() === null) {
             throw new AcmeClientException('Account URL not found');
         }
 
@@ -178,7 +178,7 @@ class AccountService
             throw new AcmeClientException('Invalid account private key');
         }
 
-        if (!$account->getAccountUrl()) {
+        if ($account->getAccountUrl() === null) {
             throw new AcmeClientException('Account URL not found');
         }
 
@@ -306,7 +306,7 @@ class AccountService
             ->where('JSON_SEARCH(a.contacts, \'one\', :email) IS NOT NULL')
             ->setParameter('email', "mailto:{$email}");
 
-        if ($serverUrl) {
+        if ($serverUrl !== null) {
             $qb->andWhere('a.acmeServerUrl = :serverUrl')
                 ->setParameter('serverUrl', $serverUrl);
         }
@@ -349,7 +349,7 @@ class AccountService
     public function getEmailFromAccount(Account $account): ?string
     {
         $contacts = $account->getContacts();
-        if (!$contacts) {
+        if ($contacts === null || $contacts === []) {
             return null;
         }
 

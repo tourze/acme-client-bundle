@@ -21,7 +21,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
  * ACME 证书续订命令
  */
 #[AsCommand(
-    name: 'acme:cert:renew',
+    name: self::NAME,
     description: '续订即将过期的ACME证书',
 )]
 class AcmeCertRenewCommand extends Command

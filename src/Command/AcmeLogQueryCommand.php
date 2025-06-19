@@ -17,7 +17,7 @@ use Tourze\ACMEClientBundle\Service\AcmeLogService;
  * ACME 日志查询命令
  */
 #[AsCommand(
-    name: 'acme:log:query',
+    name: self::NAME,
     description: '查询ACME操作日志和异常日志',
 )]
 class AcmeLogQueryCommand extends Command

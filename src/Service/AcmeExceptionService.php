@@ -50,22 +50,22 @@ class AcmeExceptionService
             ->orderBy('e.occurredAt', 'DESC')
             ->setMaxResults($limit);
 
-        if ($exceptionClass) {
+        if ($exceptionClass !== null) {
             $qb->andWhere('e.exceptionClass = :exceptionClass')
                 ->setParameter('exceptionClass', $exceptionClass);
         }
 
-        if ($entityType) {
+        if ($entityType !== null) {
             $qb->andWhere('e.entityType = :entityType')
                 ->setParameter('entityType', $entityType);
         }
 
-        if ($entityId) {
+        if ($entityId !== null) {
             $qb->andWhere('e.entityId = :entityId')
                 ->setParameter('entityId', $entityId);
         }
 
-        if ($since) {
+        if ($since !== null) {
             $qb->andWhere('e.occurredAt >= :since')
                 ->setParameter('since', $since);
         }
@@ -84,7 +84,7 @@ class AcmeExceptionService
             ->groupBy('e.exceptionClass')
             ->orderBy('count', 'DESC');
 
-        if ($since) {
+        if ($since !== null) {
             $qb->andWhere('e.occurredAt >= :since')
                 ->setParameter('since', $since);
         }
@@ -129,12 +129,12 @@ class AcmeExceptionService
             ->setParameter('message', $message)
             ->setParameter('since', $since);
 
-        if ($entityType) {
+        if ($entityType !== null) {
             $qb->andWhere('e.entityType = :entityType')
                 ->setParameter('entityType', $entityType);
         }
 
-        if ($entityId) {
+        if ($entityId !== null) {
             $qb->andWhere('e.entityId = :entityId')
                 ->setParameter('entityId', $entityId);
         }

@@ -125,7 +125,7 @@ class AcmeClientExceptionTest extends TestCase
     {
         $exception = new AcmeClientException('Test error', 400);
 
-        $string = (string) $exception;
+        $string = (string)$exception;
 
         $this->assertStringContainsString('AcmeClientException', $string);
         $this->assertStringContainsString('Test error', $string);
@@ -142,7 +142,6 @@ class AcmeClientExceptionTest extends TestCase
         } catch (AcmeClientException $e) {
             $trace = $e->getTrace();
 
-            $this->assertIsArray($trace);
             $this->assertNotEmpty($trace);
             $this->assertArrayHasKey('function', $trace[0]);
             $this->assertSame('throwTestException', $trace[0]['function']);

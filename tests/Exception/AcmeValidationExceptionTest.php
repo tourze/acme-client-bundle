@@ -207,12 +207,11 @@ class AcmeValidationExceptionTest extends TestCase
     public function test_toString_representation(): void
     {
         $exception = new AcmeValidationException('Domain validation error', 400);
-        $string = (string) $exception;
+        $string = (string)$exception;
 
         $this->assertStringContainsString('AcmeValidationException', $string);
         $this->assertStringContainsString('Domain validation error', $string);
         // Note: Exception string representation includes message and file info, but not always the code
-        $this->assertIsString($string);
         $this->assertNotEmpty($string);
     }
 
@@ -220,8 +219,6 @@ class AcmeValidationExceptionTest extends TestCase
     {
         $exception = new AcmeValidationException('Test validation error');
         $trace = $exception->getTrace();
-
-        $this->assertIsArray($trace);
         $this->assertNotEmpty($trace);
         $this->assertArrayHasKey('function', $trace[0]);
         $this->assertSame(__FUNCTION__, $trace[0]['function']);

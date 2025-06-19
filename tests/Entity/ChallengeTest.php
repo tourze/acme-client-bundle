@@ -37,7 +37,6 @@ class ChallengeTest extends TestCase
 
     public function test_authorization_getterSetter(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
         $result = $this->challenge->setAuthorization($authorization);
 
@@ -47,7 +46,6 @@ class ChallengeTest extends TestCase
 
     public function test_authorization_setToNull(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
         $this->challenge->setAuthorization($authorization);
 
@@ -279,7 +277,7 @@ class ChallengeTest extends TestCase
         $this->challenge->setType(ChallengeType::DNS_01);
 
         $expected = 'Challenge #0 (dns-01)';
-        $this->assertSame($expected, (string) $this->challenge);
+        $this->assertSame($expected, (string)$this->challenge);
     }
 
     public function test_stringableInterface(): void
@@ -289,7 +287,6 @@ class ChallengeTest extends TestCase
 
     public function test_fluentInterface_chaining(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
         $url = 'https://acme-v02.api.letsencrypt.org/acme/chall-v3/123456/abc';
         $token = 'test_token_123';
@@ -328,7 +325,6 @@ class ChallengeTest extends TestCase
 
     public function test_businessScenario_challengeCreation(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
 
         $this->challenge
@@ -362,7 +358,6 @@ class ChallengeTest extends TestCase
         // DNS 记录值应该根据 keyAuthorization 计算
         $calculatedValue = $this->challenge->calculateDnsRecordValue();
         $this->assertNotEmpty($calculatedValue);
-        $this->assertIsString($calculatedValue);
 
         // 验证 Base64URL 编码特征（无填充，使用 - 和 _）
         $this->assertStringNotContainsString('+', $calculatedValue);

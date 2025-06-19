@@ -55,8 +55,6 @@ class Certificate implements \Stringable
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '证书指纹（SHA256）'])]
     private ?string $fingerprint = null;
 
-    #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '证书主题'])]
-    private ?string $subject = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '颁发机构'])]
     private ?string $issuer = null;
@@ -74,8 +72,6 @@ class Certificate implements \Stringable
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '证书是否有效'])]
     private bool $valid = true;
 
-    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '撤销原因代码'])]
-    private ?int $revocationReason = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书撤销时间'])]
     private ?\DateTimeImmutable $revokedTime = null;
@@ -269,7 +265,7 @@ class Certificate implements \Stringable
         $now = new \DateTime();
         $interval = $now->diff($this->notAfterTime);
 
-        return $interval->invert ? -$interval->days : $interval->days;
+        return $interval->invert === 1 ? -$interval->days : $interval->days;
     }
 
     /**

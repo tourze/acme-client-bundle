@@ -39,9 +39,7 @@ class CertificateTest extends TestCase
     }
 
     public function test_order_getterSetter(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
         $result = $this->certificate->setOrder($order);
 
         $this->assertSame($this->certificate, $result);
@@ -49,9 +47,7 @@ class CertificateTest extends TestCase
     }
 
     public function test_order_setToNull(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
         $this->certificate->setOrder($order);
 
         $this->certificate->setOrder(null);
@@ -420,9 +416,7 @@ class CertificateTest extends TestCase
     }
 
     public function test_fluentInterface_chaining(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
         $certificatePem = "-----BEGIN CERTIFICATE-----\nTest\n-----END CERTIFICATE-----";
         $chainPem = "-----BEGIN CERTIFICATE-----\nChain\n-----END CERTIFICATE-----";
         $privateKey = "-----BEGIN PRIVATE KEY-----\nKey\n-----END PRIVATE KEY-----";
@@ -466,9 +460,7 @@ class CertificateTest extends TestCase
     }
 
     public function test_businessScenario_certificateIssuance(): void
-    {
-        /** @var Order $order */
-        $order = $this->createMock(Order::class);
+    {        $order = $this->createMock(Order::class);
 
         $this->certificate
             ->setOrder($order)

@@ -58,11 +58,11 @@ class OrderService
             'identifiers' => $identifiers,
         ];
 
-        if ($notBefore) {
+        if ($notBefore !== null) {
             $payload['notBefore'] = $notBefore->format(\DateTimeInterface::RFC3339);
         }
 
-        if ($notAfter) {
+        if ($notAfter !== null) {
             $payload['notAfter'] = $notAfter->format(\DateTimeInterface::RFC3339);
         }
 
@@ -140,7 +140,7 @@ class OrderService
         $account = $order->getAccount();
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
 
-        if (!$privateKey || !$order->getOrderUrl()) {
+        if ($privateKey === false || $order->getOrderUrl() === '') {
             throw new AcmeClientException('Invalid order or account data');
         }
 
@@ -182,7 +182,7 @@ class OrderService
         $account = $order->getAccount();
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
 
-        if (!$privateKey || !$order->getFinalizeUrl()) {
+        if ($privateKey === false || $order->getFinalizeUrl() === null) {
             throw new AcmeClientException('Invalid order or account data');
         }
 
@@ -231,7 +231,7 @@ class OrderService
      */
     public function downloadCertificate(Order $order): Certificate
     {
-        if (!$order->getCertificateUrl()) {
+        if ($order->getCertificateUrl() === null) {
             throw new AcmeClientException('Certificate URL not available');
         }
 

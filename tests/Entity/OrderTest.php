@@ -44,7 +44,6 @@ class OrderTest extends TestCase
 
     public function test_account_getterSetter(): void
     {
-        /** @var Account $account */
         $account = $this->createMock(Account::class);
         $result = $this->order->setAccount($account);
 
@@ -54,7 +53,6 @@ class OrderTest extends TestCase
 
     public function test_account_setToNull(): void
     {
-        /** @var Account $account */
         $account = $this->createMock(Account::class);
         $this->order->setAccount($account);
 
@@ -170,7 +168,6 @@ class OrderTest extends TestCase
 
     public function test_addOrderIdentifier(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
 
         $result = $this->order->addOrderIdentifier($identifier);
@@ -182,7 +179,6 @@ class OrderTest extends TestCase
 
     public function test_addOrderIdentifier_preventDuplicates(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
 
         $this->order->addOrderIdentifier($identifier);
@@ -194,7 +190,6 @@ class OrderTest extends TestCase
 
     public function test_removeOrderIdentifier(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
 
         $this->order->getOrderIdentifiers()->add($identifier);
@@ -209,7 +204,6 @@ class OrderTest extends TestCase
 
     public function test_addAuthorization(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
 
         $result = $this->order->addAuthorization($authorization);
@@ -221,7 +215,6 @@ class OrderTest extends TestCase
 
     public function test_addAuthorization_preventDuplicates(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
 
         $this->order->addAuthorization($authorization);
@@ -233,7 +226,6 @@ class OrderTest extends TestCase
 
     public function test_removeAuthorization(): void
     {
-        /** @var Authorization $authorization */
         $authorization = $this->createMock(Authorization::class);
 
         $this->order->getAuthorizations()->add($authorization);
@@ -248,7 +240,6 @@ class OrderTest extends TestCase
 
     public function test_certificate_getterSetter(): void
     {
-        /** @var Certificate $certificate */
         $certificate = $this->createMock(Certificate::class);
 
         $result = $this->order->setCertificate($certificate);
@@ -259,7 +250,6 @@ class OrderTest extends TestCase
 
     public function test_certificate_setToNull(): void
     {
-        /** @var Certificate $certificate */
         $certificate = $this->createMock(Certificate::class);
         $this->order->setCertificate($certificate);
 
@@ -318,9 +308,7 @@ class OrderTest extends TestCase
 
     public function test_areAllAuthorizationsValid_withValidAuthorizations(): void
     {
-        /** @var Authorization $auth1 */
         $auth1 = $this->createMock(Authorization::class);
-        /** @var Authorization $auth2 */
         $auth2 = $this->createMock(Authorization::class);
 
         $this->order->getAuthorizations()->add($auth1);
@@ -336,7 +324,7 @@ class OrderTest extends TestCase
         $this->order->setStatus(OrderStatus::PENDING);
 
         $expected = 'Order #0 (pending)';
-        $this->assertSame($expected, (string) $this->order);
+        $this->assertSame($expected, (string)$this->order);
     }
 
     public function test_toString_withDifferentStatus(): void
@@ -344,7 +332,7 @@ class OrderTest extends TestCase
         $this->order->setStatus(OrderStatus::READY);
 
         $expected = 'Order #0 (ready)';
-        $this->assertSame($expected, (string) $this->order);
+        $this->assertSame($expected, (string)$this->order);
     }
 
     public function test_stringableInterface(): void
@@ -354,7 +342,6 @@ class OrderTest extends TestCase
 
     public function test_fluentInterface_chaining(): void
     {
-        /** @var Account $account */
         $account = $this->createMock(Account::class);
         $orderUrl = 'https://acme-v02.api.letsencrypt.org/acme/order/123456';
         $finalizeUrl = 'https://acme-v02.api.letsencrypt.org/acme/finalize/123456';
@@ -382,7 +369,6 @@ class OrderTest extends TestCase
 
     public function test_businessScenario_orderCreation(): void
     {
-        /** @var Account $account */
         $account = $this->createMock(Account::class);
 
         $this->order
@@ -434,11 +420,8 @@ class OrderTest extends TestCase
 
     public function test_businessScenario_multipleIdentifiers(): void
     {
-        /** @var Identifier $id1 */
         $id1 = $this->createMock(Identifier::class);
-        /** @var Identifier $id2 */
         $id2 = $this->createMock(Identifier::class);
-        /** @var Identifier $id3 */
         $id3 = $this->createMock(Identifier::class);
 
         $this->order
@@ -454,7 +437,6 @@ class OrderTest extends TestCase
 
     public function test_businessScenario_withCertificate(): void
     {
-        /** @var Certificate $certificate */
         $certificate = $this->createMock(Certificate::class);
 
         $this->order

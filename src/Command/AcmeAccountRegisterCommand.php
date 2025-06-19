@@ -19,7 +19,7 @@ use Tourze\ACMEClientBundle\Service\AcmeLogService;
  * ACME 账户注册命令
  */
 #[AsCommand(
-    name: 'acme:account:register',
+    name: self::NAME,
     description: '注册ACME账户',
 )]
 class AcmeAccountRegisterCommand extends Command

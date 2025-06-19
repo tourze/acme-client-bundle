@@ -93,7 +93,6 @@ class IdentifierTest extends TestCase
 
     public function test_order_getterSetter(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
 
         $result = $this->identifier->setOrder($order);
@@ -103,7 +102,6 @@ class IdentifierTest extends TestCase
 
     public function test_order_setToNull(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
         $this->identifier->setOrder($order);
 
@@ -115,14 +113,14 @@ class IdentifierTest extends TestCase
     {
         $this->identifier->setType('dns')->setValue('example.com');
 
-        $this->assertSame('dns: example.com', (string) $this->identifier);
+        $this->assertSame('dns: example.com', (string)$this->identifier);
     }
 
     public function test_toString_withHttpType(): void
     {
         $this->identifier->setType('http')->setValue('example.com');
 
-        $this->assertSame('http: example.com', (string) $this->identifier);
+        $this->assertSame('http: example.com', (string)$this->identifier);
     }
 
     public function test_toString_withWildcardDomain(): void
@@ -132,7 +130,7 @@ class IdentifierTest extends TestCase
             ->setValue('*.example.com')
             ->setWildcard(true);
 
-        $this->assertSame('dns: *.example.com', (string) $this->identifier);
+        $this->assertSame('dns: *.example.com', (string)$this->identifier);
     }
 
     public function test_stringableInterface(): void
@@ -142,7 +140,6 @@ class IdentifierTest extends TestCase
 
     public function test_fluentInterface_chaining(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
 
         $result = $this->identifier
@@ -162,7 +159,6 @@ class IdentifierTest extends TestCase
 
     public function test_businessScenario_dnsIdentifier(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
 
         $this->identifier
@@ -172,7 +168,7 @@ class IdentifierTest extends TestCase
             ->setWildcard(false)
             ->setValid(true);
 
-        $this->assertSame('dns: app.example.com', (string) $this->identifier);
+        $this->assertSame('dns: app.example.com', (string)$this->identifier);
         $this->assertFalse($this->identifier->isWildcard());
         $this->assertTrue($this->identifier->isValid());
     }
@@ -207,7 +203,7 @@ class IdentifierTest extends TestCase
     {
         $this->identifier->setValue('');
         $this->assertSame('', $this->identifier->getValue());
-        $this->assertSame('dns: ', (string) $this->identifier);
+        $this->assertSame('dns: ', (string)$this->identifier);
     }
 
     public function test_edgeCases_longDomain(): void
@@ -216,7 +212,7 @@ class IdentifierTest extends TestCase
         $this->identifier->setValue($longDomain);
 
         $this->assertSame($longDomain, $this->identifier->getValue());
-        $this->assertStringContainsString($longDomain, (string) $this->identifier);
+        $this->assertStringContainsString($longDomain, (string)$this->identifier);
     }
 
     public function test_edgeCases_specialCharactersInType(): void

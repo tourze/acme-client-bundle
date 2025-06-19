@@ -39,7 +39,6 @@ class AuthorizationTest extends TestCase
 
     public function test_order_getterSetter(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
         $result = $this->authorization->setOrder($order);
 
@@ -49,7 +48,6 @@ class AuthorizationTest extends TestCase
 
     public function test_order_setToNull(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
         $this->authorization->setOrder($order);
 
@@ -59,7 +57,6 @@ class AuthorizationTest extends TestCase
 
     public function test_identifier_getterSetter(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
         $result = $this->authorization->setIdentifier($identifier);
 
@@ -69,7 +66,6 @@ class AuthorizationTest extends TestCase
 
     public function test_identifier_setToNull(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
         $this->authorization->setIdentifier($identifier);
 
@@ -160,7 +156,6 @@ class AuthorizationTest extends TestCase
 
     public function test_addChallenge(): void
     {
-        /** @var Challenge $challenge */
         $challenge = $this->createMock(Challenge::class);
 
         $result = $this->authorization->addChallenge($challenge);
@@ -172,7 +167,6 @@ class AuthorizationTest extends TestCase
 
     public function test_addChallenge_preventDuplicates(): void
     {
-        /** @var Challenge $challenge */
         $challenge = $this->createMock(Challenge::class);
 
         $this->authorization->addChallenge($challenge);
@@ -184,7 +178,6 @@ class AuthorizationTest extends TestCase
 
     public function test_removeChallenge(): void
     {
-        /** @var Challenge $challenge */
         $challenge = $this->createMock(Challenge::class);
 
         $this->authorization->getChallenges()->add($challenge);
@@ -265,18 +258,17 @@ class AuthorizationTest extends TestCase
 
     public function test_toString_withIdentifier(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
         $this->authorization->setIdentifier($identifier);
 
         $expected = 'Authorization #0 ()';
-        $this->assertSame($expected, (string) $this->authorization);
+        $this->assertSame($expected, (string)$this->authorization);
     }
 
     public function test_toString_withoutIdentifier(): void
     {
         $expected = 'Authorization #0 ()';
-        $this->assertSame($expected, (string) $this->authorization);
+        $this->assertSame($expected, (string)$this->authorization);
     }
 
     public function test_stringableInterface(): void
@@ -286,9 +278,7 @@ class AuthorizationTest extends TestCase
 
     public function test_fluentInterface_chaining(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
         $url = 'https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456';
         $expiry = new \DateTimeImmutable('+30 days');
@@ -314,9 +304,7 @@ class AuthorizationTest extends TestCase
 
     public function test_businessScenario_authorizationCreation(): void
     {
-        /** @var Order $order */
         $order = $this->createMock(Order::class);
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
 
         $this->authorization
@@ -375,7 +363,6 @@ class AuthorizationTest extends TestCase
 
     public function test_businessScenario_wildcardAuthorization(): void
     {
-        /** @var Identifier $identifier */
         $identifier = $this->createMock(Identifier::class);
 
         $this->authorization
@@ -389,11 +376,8 @@ class AuthorizationTest extends TestCase
 
     public function test_businessScenario_multipleChallenges(): void
     {
-        /** @var Challenge $challenge1 */
         $challenge1 = $this->createMock(Challenge::class);
-        /** @var Challenge $challenge2 */
         $challenge2 = $this->createMock(Challenge::class);
-        /** @var Challenge $challenge3 */
         $challenge3 = $this->createMock(Challenge::class);
 
         $this->authorization

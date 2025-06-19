@@ -37,7 +37,7 @@ class AuthorizationService
         $account = $order->getAccount();
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
 
-        if (!$privateKey || !$authorization->getAuthorizationUrl()) {
+        if ($privateKey === false || $authorization->getAuthorizationUrl() === '') {
             throw new AcmeClientException('Invalid authorization or account data');
         }
 
@@ -147,7 +147,7 @@ class AuthorizationService
         $account = $order->getAccount();
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
 
-        if (!$privateKey || !$authorization->getAuthorizationUrl()) {
+        if ($privateKey === false || $authorization->getAuthorizationUrl() === '') {
             throw new AcmeClientException('Invalid authorization or account data');
         }
 
