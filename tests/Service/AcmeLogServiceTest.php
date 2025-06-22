@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 use Tourze\ACMEClientBundle\Entity\AcmeOperationLog;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
+use Tourze\ACMEClientBundle\Repository\AcmeOperationLogRepository;
+use Tourze\ACMEClientBundle\Service\AcmeExceptionService;
 use Tourze\ACMEClientBundle\Service\AcmeLogService;
 
 /**
@@ -23,8 +24,11 @@ class AcmeLogServiceTest extends TestCase
     /** @var EntityManagerInterface */
     private $entityManager;
     
-    /** @var EntityRepository */
+    /** @var AcmeOperationLogRepository */
     private $repository;
+    
+    /** @var AcmeExceptionService */
+    private $exceptionService;
     
     /** @var QueryBuilder */
     private $queryBuilder;
@@ -35,16 +39,17 @@ class AcmeLogServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->repository = $this->createMock(EntityRepository::class);
+        $this->repository = $this->createMock(AcmeOperationLogRepository::class);
+        $this->exceptionService = $this->createMock(AcmeExceptionService::class);
         $this->queryBuilder = $this->createMock(QueryBuilder::class);
         $this->query = $this->createMock(Query::class);
         
-        $this->service = new AcmeLogService($this->entityManager);
+        $this->service = new AcmeLogService($this->entityManager, $this->repository, $this->exceptionService);
     }
 
     public function testConstructor(): void
     {
-        $service = new AcmeLogService($this->entityManager);
+        $service = new AcmeLogService($this->entityManager, $this->repository, $this->exceptionService);
         $this->assertInstanceOf(AcmeLogService::class, $service);
     }
 
@@ -224,13 +229,14 @@ class AcmeLogServiceTest extends TestCase
     {
         $exception = new \RuntimeException('Test exception', 500);
         
-        // 由于 logException 方法内部创建了 AcmeExceptionService，
-        // 我们只能验证 EntityManager 被调用了
-        $this->entityManager->expects($this->once())
-            ->method('persist');
-        
-        $this->entityManager->expects($this->once())
-            ->method('flush');
+        $this->exceptionService->expects($this->once())
+            ->method('logException')
+            ->with(
+                $exception,
+                'TestEntity',
+                123,
+                ['context' => 'test']
+            );
 
         $this->service->logException(
             $exception,
@@ -244,11 +250,9 @@ class AcmeLogServiceTest extends TestCase
     {
         $exception = new \Exception('Simple exception');
         
-        $this->entityManager->expects($this->once())
-            ->method('persist');
-        
-        $this->entityManager->expects($this->once())
-            ->method('flush');
+        $this->exceptionService->expects($this->once())
+            ->method('logException')
+            ->with($exception, null, null, null);
 
         $this->service->logException($exception);
     }
@@ -259,11 +263,6 @@ class AcmeLogServiceTest extends TestCase
             new AcmeOperationLog(),
             new AcmeOperationLog(),
         ];
-
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeOperationLog::class)
-            ->willReturn($this->repository);
 
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
@@ -311,11 +310,6 @@ class AcmeLogServiceTest extends TestCase
     {
         $expectedLogs = [];
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeOperationLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('l')
@@ -350,11 +344,6 @@ class AcmeLogServiceTest extends TestCase
     public function testFindLogsWithPartialFilters(): void
     {
         $expectedLogs = [new AcmeOperationLog()];
-
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeOperationLog::class)
-            ->willReturn($this->repository);
 
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')

@@ -7,6 +7,7 @@ namespace Tourze\ACMEClientBundle\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use Tourze\ACMEClientBundle\Entity\AcmeOperationLog;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
+use Tourze\ACMEClientBundle\Repository\AcmeOperationLogRepository;
 
 /**
  * ACME 日志服务
@@ -16,7 +17,9 @@ use Tourze\ACMEClientBundle\Enum\LogLevel;
 class AcmeLogService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly AcmeOperationLogRepository $operationLogRepository,
+        private readonly AcmeExceptionService $exceptionService,
     ) {}
 
     /**
@@ -130,8 +133,7 @@ class AcmeLogService
         ?int $entityId = null,
         ?array $context = null
     ): void {
-        $exceptionService = new AcmeExceptionService($this->entityManager);
-        $exceptionService->logException($exception, $entityType, $entityId, $context);
+        $this->exceptionService->logException($exception, $entityType, $entityId, $context);
     }
 
     /**
@@ -144,7 +146,7 @@ class AcmeLogService
         ?string $level = null,
         int $limit = 100
     ): array {
-        $qb = $this->entityManager->getRepository(AcmeOperationLog::class)
+        $qb = $this->operationLogRepository
             ->createQueryBuilder('l')
             ->orderBy('l.occurredTime', 'DESC')
             ->setMaxResults($limit);

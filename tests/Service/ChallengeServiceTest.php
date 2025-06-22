@@ -250,10 +250,6 @@ class ChallengeServiceTest extends TestCase
         $this->assertTrue($isInvalid);
     }
 
-    public function testFindChallengesByStatus(): void
-    {
-        $this->assertTrue(method_exists($this->service, 'findChallengesByStatus'));
-    }
 
     public function testGetDns01Challenge(): void
     {

@@ -341,12 +341,4 @@ class AcmeApiClientTest extends TestCase
         $this->client->getDirectory();
     }
 
-    public function testMethodExistence(): void
-    {
-        // 验证关键方法存在
-        $this->assertTrue(method_exists($this->client, 'getDirectory'));
-        $this->assertTrue(method_exists($this->client, 'getNonce'));
-        $this->assertTrue(method_exists($this->client, 'post'));
-        $this->assertTrue(method_exists($this->client, 'get'));
-    }
 }

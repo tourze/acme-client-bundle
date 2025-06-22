@@ -608,7 +608,6 @@ class CertificateTest extends TestCase
 
         // 由于时间精度问题，这个测试可能会有微小差异
         $isExpired = $this->certificate->isExpired();
-        $this->assertIsBool($isExpired); // 验证返回布尔类型
 
         $days = $this->certificate->getDaysUntilExpiry();
         $this->assertIsInt($days);

@@ -113,11 +113,4 @@ class OrderServiceTest extends TestCase
         $this->assertEquals($expectedOrders, $result);
     }
 
-    public function testMethodExistence(): void
-    {
-        $this->assertTrue(method_exists($this->service, 'createOrder'));
-        $this->assertTrue(method_exists($this->service, 'getOrderStatus'));
-        $this->assertTrue(method_exists($this->service, 'findOrdersByAccount'));
-        $this->assertTrue(method_exists($this->service, 'findOrdersByStatus'));
-    }
 }

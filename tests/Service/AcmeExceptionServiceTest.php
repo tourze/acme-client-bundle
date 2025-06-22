@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 use Tourze\ACMEClientBundle\Entity\AcmeExceptionLog;
+use Tourze\ACMEClientBundle\Repository\AcmeExceptionLogRepository;
 use Tourze\ACMEClientBundle\Service\AcmeExceptionService;
 
 /**
@@ -22,7 +22,7 @@ class AcmeExceptionServiceTest extends TestCase
     /** @var EntityManagerInterface */
     private $entityManager;
     
-    /** @var EntityRepository */
+    /** @var AcmeExceptionLogRepository */
     private $repository;
     
     /** @var QueryBuilder */
@@ -34,16 +34,16 @@ class AcmeExceptionServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->repository = $this->createMock(EntityRepository::class);
+        $this->repository = $this->createMock(AcmeExceptionLogRepository::class);
         $this->queryBuilder = $this->createMock(QueryBuilder::class);
         $this->query = $this->createMock(Query::class);
         
-        $this->service = new AcmeExceptionService($this->entityManager);
+        $this->service = new AcmeExceptionService($this->entityManager, $this->repository);
     }
 
     public function testConstructor(): void
     {
-        $service = new AcmeExceptionService($this->entityManager);
+        $service = new AcmeExceptionService($this->entityManager, $this->repository);
         $this->assertInstanceOf(AcmeExceptionService::class, $service);
     }
 
@@ -102,11 +102,6 @@ class AcmeExceptionServiceTest extends TestCase
         ];
         $since = new \DateTimeImmutable('-1 hour');
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -153,11 +148,6 @@ class AcmeExceptionServiceTest extends TestCase
     {
         $expectedExceptions = [];
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -192,11 +182,6 @@ class AcmeExceptionServiceTest extends TestCase
     public function testFindExceptionsWithPartialFilters(): void
     {
         $expectedExceptions = [new AcmeExceptionLog()];
-
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
 
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
@@ -244,11 +229,6 @@ class AcmeExceptionServiceTest extends TestCase
             ['exceptionClass' => 'InvalidArgumentException', 'count' => 3],
         ];
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -291,11 +271,6 @@ class AcmeExceptionServiceTest extends TestCase
             ['exceptionClass' => 'RuntimeException', 'count' => 2],
         ];
         $since = new \DateTimeImmutable('-1 day');
-
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
 
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
@@ -416,11 +391,6 @@ class AcmeExceptionServiceTest extends TestCase
     {
         $mockException = new AcmeExceptionLog();
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -460,11 +430,6 @@ class AcmeExceptionServiceTest extends TestCase
 
     public function testHasDuplicateExceptionFalse(): void
     {
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -501,11 +466,6 @@ class AcmeExceptionServiceTest extends TestCase
 
     public function testHasDuplicateExceptionWithEntityInfo(): void
     {
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -550,11 +510,6 @@ class AcmeExceptionServiceTest extends TestCase
             new AcmeExceptionLog(),
         ];
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('e')
@@ -596,11 +551,6 @@ class AcmeExceptionServiceTest extends TestCase
     public function testGetRecentExceptionsWithDefaults(): void
     {
         $expectedExceptions = [];
-
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(AcmeExceptionLog::class)
-            ->willReturn($this->repository);
 
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')

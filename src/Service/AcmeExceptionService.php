@@ -6,6 +6,7 @@ namespace Tourze\ACMEClientBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Tourze\ACMEClientBundle\Entity\AcmeExceptionLog;
+use Tourze\ACMEClientBundle\Repository\AcmeExceptionLogRepository;
 
 /**
  * ACME 异常服务
@@ -15,7 +16,8 @@ use Tourze\ACMEClientBundle\Entity\AcmeExceptionLog;
 class AcmeExceptionService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly AcmeExceptionLogRepository $exceptionLogRepository,
     ) {}
 
     /**
@@ -45,7 +47,7 @@ class AcmeExceptionService
         ?\DateTimeImmutable $since = null,
         int $limit = 100
     ): array {
-        $qb = $this->entityManager->getRepository(AcmeExceptionLog::class)
+        $qb = $this->exceptionLogRepository
             ->createQueryBuilder('e')
             ->orderBy('e.occurredAt', 'DESC')
             ->setMaxResults($limit);
@@ -78,7 +80,7 @@ class AcmeExceptionService
      */
     public function getExceptionStats(?\DateTimeImmutable $since = null): array
     {
-        $qb = $this->entityManager->getRepository(AcmeExceptionLog::class)
+        $qb = $this->exceptionLogRepository
             ->createQueryBuilder('e')
             ->select('e.exceptionClass, COUNT(e.id) as count')
             ->groupBy('e.exceptionClass')
@@ -120,7 +122,7 @@ class AcmeExceptionService
     ): bool {
         $since = new \DateTimeImmutable("-{$minutesWindow} minutes");
 
-        $qb = $this->entityManager->getRepository(AcmeExceptionLog::class)
+        $qb = $this->exceptionLogRepository
             ->createQueryBuilder('e')
             ->where('e.exceptionClass = :exceptionClass')
             ->andWhere('e.message = :message')
@@ -149,7 +151,7 @@ class AcmeExceptionService
     {
         $since = new \DateTimeImmutable("-{$hours} hours");
 
-        return $this->entityManager->getRepository(AcmeExceptionLog::class)
+        return $this->exceptionLogRepository
             ->createQueryBuilder('e')
             ->where('e.occurredAt >= :since')
             ->orderBy('e.occurredAt', 'DESC')

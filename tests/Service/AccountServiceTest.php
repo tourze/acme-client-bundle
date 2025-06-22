@@ -292,17 +292,6 @@ class AccountServiceTest extends TestCase
         $this->assertFalse($this->service->isAccountValid($invalidAccount));
     }
 
-    public function testFindAccountByEmailNotImplemented(): void
-    {
-        // 由于 findAccountByEmail 使用复杂的 SQL 查询，我们只测试方法存在
-        $this->assertTrue(method_exists($this->service, 'findAccountByEmail'));
-    }
-
-    public function testRegisterAccountByEmailNotImplemented(): void
-    {
-        // 由于 registerAccountByEmail 涉及 readonly 属性修改，我们只测试方法存在
-        $this->assertTrue(method_exists($this->service, 'registerAccountByEmail'));
-    }
 
     public function testGetEmailFromAccount(): void
     {
