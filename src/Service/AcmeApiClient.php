@@ -18,7 +18,7 @@ use Tourze\ACMEClientBundle\Exception\AcmeValidationException;
 
 /**
  * ACME API 客户端
- * 
+ *
  * 负责与 ACME 服务器进行低级别的 HTTP 通信，处理 JWS 签名、nonce 管理等
  */
 class AcmeApiClient

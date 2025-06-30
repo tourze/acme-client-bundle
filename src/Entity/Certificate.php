@@ -13,7 +13,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 
 /**
  * ACME 证书实体
- * 
+ *
  * 存储签发的证书信息，包括证书内容、私钥、证书链等
  */
 #[ORM\Entity(repositoryClass: CertificateRepository::class)]

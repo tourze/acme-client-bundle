@@ -169,18 +169,6 @@ class CertificateServiceTest extends TestCase
         $this->assertFalse($isValid);
     }
 
-    public function testGenerateCsr(): void
-    {
-        $domains = ['example.com', 'www.example.com'];
-        $privateKey = $this->generateTestPrivateKey();
-        
-        // 验证私钥格式
-        $this->assertStringContainsString('BEGIN PRIVATE KEY', $privateKey);
-        $this->assertStringContainsString('END PRIVATE KEY', $privateKey);
-
-        // 跳过此测试，因为在测试环境中 OpenSSL 配置可能不完整
-        $this->markTestSkipped('Skipping CSR generation test due to OpenSSL configuration issues in test environment');
-    }
 
 
     /**

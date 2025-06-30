@@ -558,11 +558,11 @@ class AcmeExceptionLogTest extends TestCase
     {
         // 创建一个有具体文件和行号的异常
         try {
-            throw new \RuntimeException('Test exception for factory', 999);
+            throw new \Tourze\ACMEClientBundle\Exception\AcmeClientException('Test exception for factory', 999);
         } catch (\Throwable $exception) {
             $log = AcmeExceptionLog::fromException($exception);
             
-            $this->assertSame('RuntimeException', $log->getExceptionClass());
+            $this->assertSame('Tourze\\ACMEClientBundle\\Exception\\AcmeClientException', $log->getExceptionClass());
             $this->assertSame('Test exception for factory', $log->getMessage());
             $this->assertSame(999, $log->getCode());
             $this->assertStringContainsString(__FILE__, $log->getFile());
