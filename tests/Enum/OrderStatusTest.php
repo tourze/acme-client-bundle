@@ -4,102 +4,40 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Enum\OrderStatus;
+use Tourze\EnumExtra\Itemable;
+use Tourze\EnumExtra\Labelable;
+use Tourze\EnumExtra\Selectable;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
 /**
  * ACME 订单状态枚举测试
+ *
+ * @internal
  */
-class OrderStatusTest extends TestCase
+#[CoversClass(OrderStatus::class)]
+final class OrderStatusTest extends AbstractEnumTestCase
 {
-    public function test_enum_has_all_expected_cases(): void
+    public function testEnumHasAllExpectedCases(): void
     {
         $expectedCases = ['pending', 'ready', 'processing', 'valid', 'invalid'];
-        $actualCases = array_map(fn(OrderStatus $case) => $case->value, OrderStatus::cases());
+        $actualCases = array_map(fn (OrderStatus $case) => $case->value, OrderStatus::cases());
 
         $this->assertSame($expectedCases, $actualCases);
         $this->assertCount(5, OrderStatus::cases());
     }
 
-    public function test_pending_case_properties(): void
-    {
-        $status = OrderStatus::PENDING;
-
-        $this->assertSame('pending', $status->value);
-        $this->assertSame('待处理', $status->getLabel());
-    }
-
-    public function test_ready_case_properties(): void
-    {
-        $status = OrderStatus::READY;
-
-        $this->assertSame('ready', $status->value);
-        $this->assertSame('准备就绪', $status->getLabel());
-    }
-
-    public function test_processing_case_properties(): void
-    {
-        $status = OrderStatus::PROCESSING;
-
-        $this->assertSame('processing', $status->value);
-        $this->assertSame('处理中', $status->getLabel());
-    }
-
-    public function test_valid_case_properties(): void
-    {
-        $status = OrderStatus::VALID;
-
-        $this->assertSame('valid', $status->value);
-        $this->assertSame('有效', $status->getLabel());
-    }
-
-    public function test_invalid_case_properties(): void
-    {
-        $status = OrderStatus::INVALID;
-
-        $this->assertSame('invalid', $status->value);
-        $this->assertSame('无效', $status->getLabel());
-    }
-
-    public function test_enum_from_string_value(): void
-    {
-        $this->assertSame(OrderStatus::PENDING, OrderStatus::from('pending'));
-        $this->assertSame(OrderStatus::READY, OrderStatus::from('ready'));
-        $this->assertSame(OrderStatus::PROCESSING, OrderStatus::from('processing'));
-        $this->assertSame(OrderStatus::VALID, OrderStatus::from('valid'));
-        $this->assertSame(OrderStatus::INVALID, OrderStatus::from('invalid'));
-    }
-
-    public function test_enum_from_invalid_string_throws_exception(): void
-    {
-        $this->expectException(\ValueError::class);
-        OrderStatus::from('unknown_status');
-    }
-
-    public function test_try_from_with_valid_values(): void
-    {
-        $this->assertSame(OrderStatus::PENDING, OrderStatus::tryFrom('pending'));
-        $this->assertSame(OrderStatus::READY, OrderStatus::tryFrom('ready'));
-        $this->assertSame(OrderStatus::PROCESSING, OrderStatus::tryFrom('processing'));
-        $this->assertSame(OrderStatus::VALID, OrderStatus::tryFrom('valid'));
-        $this->assertSame(OrderStatus::INVALID, OrderStatus::tryFrom('invalid'));
-    }
-
-    public function test_try_from_with_invalid_value_returns_null(): void
-    {
-        $this->assertNull(OrderStatus::tryFrom('unknown_status'));
-    }
-
-    public function test_enum_implements_required_interfaces(): void
+    public function testEnumImplementsRequiredInterfaces(): void
     {
         $reflection = new \ReflectionEnum(OrderStatus::class);
 
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Labelable::class));
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Itemable::class));
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Selectable::class));
+        $this->assertTrue($reflection->implementsInterface(Labelable::class));
+        $this->assertTrue($reflection->implementsInterface(Itemable::class));
+        $this->assertTrue($reflection->implementsInterface(Selectable::class));
     }
 
-    public function test_enum_can_be_used_in_array_mapping(): void
+    public function testEnumCanBeUsedInArrayMapping(): void
     {
         $statusLabels = [];
         foreach (OrderStatus::cases() as $status) {
@@ -117,12 +55,55 @@ class OrderStatusTest extends TestCase
         $this->assertSame($expected, $statusLabels);
     }
 
-    public function test_enum_string_representation(): void
+    public function testEnumStringRepresentation(): void
     {
         $this->assertSame('pending', (string) OrderStatus::PENDING->value);
         $this->assertSame('ready', (string) OrderStatus::READY->value);
         $this->assertSame('processing', (string) OrderStatus::PROCESSING->value);
         $this->assertSame('valid', (string) OrderStatus::VALID->value);
         $this->assertSame('invalid', (string) OrderStatus::INVALID->value);
+    }
+
+    /**
+     * 测试 toSelectItems 方法
+     */
+    public function testToSelectItems(): void
+    {
+        $selectItems = OrderStatus::toSelectItems();
+
+        $this->assertCount(5, $selectItems);
+
+        foreach ($selectItems as $item) {
+            $this->assertArrayHasKey('value', $item);
+            $this->assertArrayHasKey('label', $item);
+        }
+
+        // 验证具体内容
+        $this->assertContains(['value' => 'pending', 'label' => '待处理'], $selectItems);
+        $this->assertContains(['value' => 'ready', 'label' => '准备就绪'], $selectItems);
+        $this->assertContains(['value' => 'processing', 'label' => '处理中'], $selectItems);
+        $this->assertContains(['value' => 'valid', 'label' => '有效'], $selectItems);
+        $this->assertContains(['value' => 'invalid', 'label' => '无效'], $selectItems);
+    }
+
+    /**
+     * 测试 toArray 方法
+     */
+    public function testToArray(): void
+    {
+        $array = OrderStatus::PENDING->toArray();
+        $this->assertSame(['value' => 'pending', 'label' => '待处理'], $array);
+
+        $array = OrderStatus::READY->toArray();
+        $this->assertSame(['value' => 'ready', 'label' => '准备就绪'], $array);
+
+        $array = OrderStatus::PROCESSING->toArray();
+        $this->assertSame(['value' => 'processing', 'label' => '处理中'], $array);
+
+        $array = OrderStatus::VALID->toArray();
+        $this->assertSame(['value' => 'valid', 'label' => '有效'], $array);
+
+        $array = OrderStatus::INVALID->toArray();
+        $this->assertSame(['value' => 'invalid', 'label' => '无效'], $array);
     }
 }

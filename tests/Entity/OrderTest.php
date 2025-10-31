@@ -5,507 +5,352 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Account;
 use Tourze\ACMEClientBundle\Entity\Authorization;
 use Tourze\ACMEClientBundle\Entity\Certificate;
 use Tourze\ACMEClientBundle\Entity\Identifier;
 use Tourze\ACMEClientBundle\Entity\Order;
 use Tourze\ACMEClientBundle\Enum\OrderStatus;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Order 实体测试类
+ *
+ * @internal
  */
-class OrderTest extends TestCase
+#[CoversClass(Order::class)]
+final class OrderTest extends AbstractEntityTestCase
 {
-    private Order $order;
-
-    protected function setUp(): void
+    public function testConstructorDefaultValues(): void
     {
-        $this->order = new Order();
+        $order = $this->createEntity();
+        $this->assertNull($order->getId());
+        $this->assertNull($order->getAccount());
+        $this->assertSame(OrderStatus::PENDING, $order->getStatus());
+        $this->assertNull($order->getExpiresTime());
+        $this->assertNull($order->getError());
+        $this->assertNull($order->getFinalizeUrl());
+        $this->assertNull($order->getCertificateUrl());
+        $this->assertFalse($order->isValid());
+        $this->assertInstanceOf(ArrayCollection::class, $order->getOrderIdentifiers());
+        $this->assertTrue($order->getOrderIdentifiers()->isEmpty());
+        $this->assertInstanceOf(ArrayCollection::class, $order->getAuthorizations());
+        $this->assertTrue($order->getAuthorizations()->isEmpty());
+        $this->assertNull($order->getCertificate());
     }
 
-    public function test_constructor_defaultValues(): void
+    public function testStatusAutomaticValidFlag(): void
     {
-        $this->assertNull($this->order->getId());
-        $this->assertNull($this->order->getAccount());
-        $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
-        $this->assertNull($this->order->getExpiresTime());
-        $this->assertNull($this->order->getError());
-        $this->assertNull($this->order->getFinalizeUrl());
-        $this->assertNull($this->order->getCertificateUrl());
-        $this->assertFalse($this->order->isValid());
-        $this->assertInstanceOf(ArrayCollection::class, $this->order->getOrderIdentifiers());
-        $this->assertTrue($this->order->getOrderIdentifiers()->isEmpty());
-        $this->assertInstanceOf(ArrayCollection::class, $this->order->getAuthorizations());
-        $this->assertTrue($this->order->getAuthorizations()->isEmpty());
-        $this->assertNull($this->order->getCertificate());
-    }
+        $order = $this->createEntity();
 
-    public function test_account_getterSetter(): void
-    {
-        $account = $this->createMock(Account::class);
-        $result = $this->order->setAccount($account);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($account, $this->order->getAccount());
-    }
-
-    public function test_account_setToNull(): void
-    {
-        $account = $this->createMock(Account::class);
-        $this->order->setAccount($account);
-
-        $this->order->setAccount(null);
-        $this->assertNull($this->order->getAccount());
-    }
-
-    public function test_orderUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/order/123456';
-        $result = $this->order->setOrderUrl($url);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($url, $this->order->getOrderUrl());
-    }
-
-    public function test_status_getterSetter(): void
-    {
-        $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
-
-        $result = $this->order->setStatus(OrderStatus::READY);
-        $this->assertSame($this->order, $result);
-        $this->assertSame(OrderStatus::READY, $this->order->getStatus());
-    }
-
-    public function test_status_automaticValidFlag(): void
-    {
         // 设置为 VALID 时自动设置 valid 标志为 true
-        $this->order->setStatus(OrderStatus::VALID);
-        $this->assertTrue($this->order->isValid());
+        $order->setStatus(OrderStatus::VALID);
+        $this->assertTrue($order->isValid());
 
         // 设置为其他状态时 valid 标志为 false
-        $this->order->setStatus(OrderStatus::PENDING);
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::PENDING);
+        $this->assertFalse($order->isValid());
 
-        $this->order->setStatus(OrderStatus::READY);
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::READY);
+        $this->assertFalse($order->isValid());
 
-        $this->order->setStatus(OrderStatus::PROCESSING);
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::PROCESSING);
+        $this->assertFalse($order->isValid());
 
-        $this->order->setStatus(OrderStatus::INVALID);
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::INVALID);
+        $this->assertFalse($order->isValid());
     }
 
-    public function test_expiresTime_getterSetter(): void
+    public function testIsExpiredWithFutureDate(): void
     {
-        $this->assertNull($this->order->getExpiresTime());
-
-        $expiry = new \DateTimeImmutable('+7 days');
-        $result = $this->order->setExpiresTime($expiry);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($expiry, $this->order->getExpiresTime());
-    }
-
-    public function test_expiresTime_setToNull(): void
-    {
-        $this->order->setExpiresTime(new \DateTimeImmutable());
-        $this->order->setExpiresTime(null);
-
-        $this->assertNull($this->order->getExpiresTime());
-    }
-
-    public function test_error_getterSetter(): void
-    {
-        $this->assertNull($this->order->getError());
-
-        $error = 'Domain validation failed';
-        $result = $this->order->setError($error);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($error, $this->order->getError());
-    }
-
-    public function test_error_setToNull(): void
-    {
-        $this->order->setError('Some error');
-        $this->order->setError(null);
-
-        $this->assertNull($this->order->getError());
-    }
-
-    public function test_finalizeUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/finalize/123456';
-        $result = $this->order->setFinalizeUrl($url);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($url, $this->order->getFinalizeUrl());
-    }
-
-    public function test_certificateUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/cert/123456';
-        $result = $this->order->setCertificateUrl($url);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($url, $this->order->getCertificateUrl());
-    }
-
-    public function test_valid_getterSetter(): void
-    {
-        $this->assertFalse($this->order->isValid());
-
-        $result = $this->order->setValid(true);
-        $this->assertSame($this->order, $result);
-        $this->assertTrue($this->order->isValid());
-
-        $this->order->setValid(false);
-        $this->assertFalse($this->order->isValid());
-    }
-
-    public function test_addOrderIdentifier(): void
-    {
-        $identifier = $this->createMock(Identifier::class);
-
-        $result = $this->order->addOrderIdentifier($identifier);
-
-        $this->assertSame($this->order, $result);
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($identifier));
-        $this->assertSame(1, $this->order->getOrderIdentifiers()->count());
-    }
-
-    public function test_addOrderIdentifier_preventDuplicates(): void
-    {
-        $identifier = $this->createMock(Identifier::class);
-
-        $this->order->addOrderIdentifier($identifier);
-        $this->order->addOrderIdentifier($identifier);
-
-        $this->assertSame(1, $this->order->getOrderIdentifiers()->count());
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($identifier));
-    }
-
-    public function test_removeOrderIdentifier(): void
-    {
-        $identifier = $this->createMock(Identifier::class);
-
-        $this->order->getOrderIdentifiers()->add($identifier);
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($identifier));
-
-        $result = $this->order->removeOrderIdentifier($identifier);
-
-        $this->assertSame($this->order, $result);
-        $this->assertFalse($this->order->getOrderIdentifiers()->contains($identifier));
-        $this->assertSame(0, $this->order->getOrderIdentifiers()->count());
-    }
-
-    public function test_addAuthorization(): void
-    {
-        $authorization = $this->createMock(Authorization::class);
-
-        $result = $this->order->addAuthorization($authorization);
-
-        $this->assertSame($this->order, $result);
-        $this->assertTrue($this->order->getAuthorizations()->contains($authorization));
-        $this->assertSame(1, $this->order->getAuthorizations()->count());
-    }
-
-    public function test_addAuthorization_preventDuplicates(): void
-    {
-        $authorization = $this->createMock(Authorization::class);
-
-        $this->order->addAuthorization($authorization);
-        $this->order->addAuthorization($authorization);
-
-        $this->assertSame(1, $this->order->getAuthorizations()->count());
-        $this->assertTrue($this->order->getAuthorizations()->contains($authorization));
-    }
-
-    public function test_removeAuthorization(): void
-    {
-        $authorization = $this->createMock(Authorization::class);
-
-        $this->order->getAuthorizations()->add($authorization);
-        $this->assertTrue($this->order->getAuthorizations()->contains($authorization));
-
-        $result = $this->order->removeAuthorization($authorization);
-
-        $this->assertSame($this->order, $result);
-        $this->assertFalse($this->order->getAuthorizations()->contains($authorization));
-        $this->assertSame(0, $this->order->getAuthorizations()->count());
-    }
-
-    public function test_certificate_getterSetter(): void
-    {
-        $certificate = $this->createMock(Certificate::class);
-
-        $result = $this->order->setCertificate($certificate);
-
-        $this->assertSame($this->order, $result);
-        $this->assertSame($certificate, $this->order->getCertificate());
-    }
-
-    public function test_certificate_setToNull(): void
-    {
-        $certificate = $this->createMock(Certificate::class);
-        $this->order->setCertificate($certificate);
-
-        $this->order->setCertificate(null);
-        $this->assertNull($this->order->getCertificate());
-    }
-
-    public function test_isExpired_withFutureDate(): void
-    {
+        $order = $this->createEntity();
         $future = new \DateTimeImmutable('+1 hour');
-        $this->order->setExpiresTime($future);
+        $order->setExpiresTime($future);
 
-        $this->assertFalse($this->order->isExpired());
+        $this->assertFalse($order->isExpired());
     }
 
-    public function test_isExpired_withPastDate(): void
+    public function testIsExpiredWithPastDate(): void
     {
+        $order = $this->createEntity();
         $past = new \DateTimeImmutable('-1 hour');
-        $this->order->setExpiresTime($past);
+        $order->setExpiresTime($past);
 
-        $this->assertTrue($this->order->isExpired());
+        $this->assertTrue($order->isExpired());
     }
 
-    public function test_isReady(): void
+    public function testIsReady(): void
     {
-        $this->assertFalse($this->order->isReady());
+        $order = $this->createEntity();
+        $this->assertFalse($order->isReady());
 
-        $this->order->setStatus(OrderStatus::PENDING);
-        $this->assertFalse($this->order->isReady());
+        $order->setStatus(OrderStatus::PENDING);
+        $this->assertFalse($order->isReady());
 
-        $this->order->setStatus(OrderStatus::READY);
-        $this->assertTrue($this->order->isReady());
+        $order->setStatus(OrderStatus::READY);
+        $this->assertTrue($order->isReady());
 
-        $this->order->setStatus(OrderStatus::VALID);
-        $this->assertFalse($this->order->isReady());
+        $order->setStatus(OrderStatus::VALID);
+        $this->assertFalse($order->isReady());
     }
 
-    public function test_isInvalid(): void
+    public function testIsInvalid(): void
     {
-        $this->assertFalse($this->order->isInvalid());
+        $order = $this->createEntity();
+        $this->assertFalse($order->isInvalid());
 
-        $this->order->setStatus(OrderStatus::PENDING);
-        $this->assertFalse($this->order->isInvalid());
+        $order->setStatus(OrderStatus::PENDING);
+        $this->assertFalse($order->isInvalid());
 
-        $this->order->setStatus(OrderStatus::INVALID);
-        $this->assertTrue($this->order->isInvalid());
+        $order->setStatus(OrderStatus::INVALID);
+        $this->assertTrue($order->isInvalid());
 
-        $this->order->setStatus(OrderStatus::VALID);
-        $this->assertFalse($this->order->isInvalid());
+        $order->setStatus(OrderStatus::VALID);
+        $this->assertFalse($order->isInvalid());
     }
 
-    public function test_areAllAuthorizationsValid_empty(): void
+    public function testAreAllAuthorizationsValidEmpty(): void
     {
-        $this->assertTrue($this->order->areAllAuthorizationsValid());
+        $order = $this->createEntity();
+        $this->assertTrue($order->areAllAuthorizationsValid());
     }
 
-    public function test_areAllAuthorizationsValid_withValidAuthorizations(): void
+    public function testAreAllAuthorizationsValidWithValidAuthorizations(): void
     {
+        $order = $this->createEntity();
         $auth1 = $this->createMock(Authorization::class);
         $auth2 = $this->createMock(Authorization::class);
 
-        $this->order->getAuthorizations()->add($auth1);
-        $this->order->getAuthorizations()->add($auth2);
+        $order->getAuthorizations()->add($auth1);
+        $order->getAuthorizations()->add($auth2);
 
         // 由于实际方法会调用 Authorization::isValid()，而 mock 对象默认返回 false
         // 这里测试的是默认行为：当有授权但未显式设置为有效时，应该返回 false
-        $this->assertFalse($this->order->areAllAuthorizationsValid());
+        $this->assertFalse($order->areAllAuthorizationsValid());
     }
 
-    public function test_toString_withoutId(): void
+    public function testToStringWithoutId(): void
     {
-        $this->order->setStatus(OrderStatus::PENDING);
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::PENDING);
 
         $expected = 'Order #0 (pending)';
-        $this->assertSame($expected, (string)$this->order);
+        $this->assertSame($expected, (string) $order);
     }
 
-    public function test_toString_withDifferentStatus(): void
+    public function testToStringWithDifferentStatus(): void
     {
-        $this->order->setStatus(OrderStatus::READY);
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::READY);
 
         $expected = 'Order #0 (ready)';
-        $this->assertSame($expected, (string)$this->order);
+        $this->assertSame($expected, (string) $order);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->order);
+        $order = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $order);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        $order = $this->createEntity();
         $account = $this->createMock(Account::class);
         $orderUrl = 'https://acme-v02.api.letsencrypt.org/acme/order/123456';
         $finalizeUrl = 'https://acme-v02.api.letsencrypt.org/acme/finalize/123456';
         $certUrl = 'https://acme-v02.api.letsencrypt.org/acme/cert/123456';
         $expiry = new \DateTimeImmutable('+7 days');
 
-        $result = $this->order
-            ->setAccount($account)
-            ->setOrderUrl($orderUrl)
-            ->setStatus(OrderStatus::READY)
-            ->setExpiresTime($expiry)
-            ->setFinalizeUrl($finalizeUrl)
-            ->setCertificateUrl($certUrl)
-            ->setValid(true);
+        $order->setAccount($account);
+        $order->setOrderUrl($orderUrl);
+        $order->setStatus(OrderStatus::READY);
+        $order->setExpiresTime($expiry);
+        $order->setFinalizeUrl($finalizeUrl);
+        $order->setCertificateUrl($certUrl);
+        $order->setValid(true);
+        $result = $order;
 
-        $this->assertSame($this->order, $result);
-        $this->assertSame($account, $this->order->getAccount());
-        $this->assertSame($orderUrl, $this->order->getOrderUrl());
-        $this->assertSame(OrderStatus::READY, $this->order->getStatus());
-        $this->assertSame($expiry, $this->order->getExpiresTime());
-        $this->assertSame($finalizeUrl, $this->order->getFinalizeUrl());
-        $this->assertSame($certUrl, $this->order->getCertificateUrl());
-        $this->assertTrue($this->order->isValid());
+        $this->assertSame($order, $result);
+        $this->assertSame($account, $order->getAccount());
+        $this->assertSame($orderUrl, $order->getOrderUrl());
+        $this->assertSame(OrderStatus::READY, $order->getStatus());
+        $this->assertSame($expiry, $order->getExpiresTime());
+        $this->assertSame($finalizeUrl, $order->getFinalizeUrl());
+        $this->assertSame($certUrl, $order->getCertificateUrl());
+        $this->assertTrue($order->isValid());
     }
 
-    public function test_businessScenario_orderCreation(): void
+    public function testBusinessScenarioOrderCreation(): void
     {
+        $order = $this->createEntity();
         $account = $this->createMock(Account::class);
 
-        $this->order
-            ->setAccount($account)
-            ->setOrderUrl('https://acme-v02.api.letsencrypt.org/acme/order/123456')
-            ->setStatus(OrderStatus::PENDING)
-            ->setExpiresTime(new \DateTimeImmutable('+7 days'));
+        $order->setAccount($account);
+        $order->setOrderUrl('https://acme-v02.api.letsencrypt.org/acme/order/123456');
+        $order->setStatus(OrderStatus::PENDING);
+        $order->setExpiresTime(new \DateTimeImmutable('+7 days'));
 
-        $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
-        $this->assertFalse($this->order->isValid());
-        $this->assertFalse($this->order->isReady());
-        $this->assertFalse($this->order->isInvalid());
-        $this->assertFalse($this->order->isExpired());
+        $this->assertSame(OrderStatus::PENDING, $order->getStatus());
+        $this->assertFalse($order->isValid());
+        $this->assertFalse($order->isReady());
+        $this->assertFalse($order->isInvalid());
+        $this->assertFalse($order->isExpired());
     }
 
-    public function test_businessScenario_orderProgression(): void
+    public function testBusinessScenarioOrderProgression(): void
     {
+        $order = $this->createEntity();
+
         // 订单创建
-        $this->order->setStatus(OrderStatus::PENDING);
-        $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::PENDING);
+        $this->assertSame(OrderStatus::PENDING, $order->getStatus());
+        $this->assertFalse($order->isValid());
 
         // 授权完成，订单准备就绪
-        $this->order->setStatus(OrderStatus::READY);
-        $this->assertTrue($this->order->isReady());
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::READY);
+        $this->assertTrue($order->isReady());
+        $this->assertFalse($order->isValid());
 
         // 处理中
-        $this->order->setStatus(OrderStatus::PROCESSING);
-        $this->assertFalse($this->order->isReady());
-        $this->assertFalse($this->order->isValid());
+        $order->setStatus(OrderStatus::PROCESSING);
+        $this->assertFalse($order->isReady());
+        $this->assertFalse($order->isValid());
 
         // 完成
-        $this->order->setStatus(OrderStatus::VALID);
-        $this->assertTrue($this->order->isValid());
-        $this->assertFalse($this->order->isReady());
+        $order->setStatus(OrderStatus::VALID);
+        $this->assertTrue($order->isValid());
+        $this->assertFalse($order->isReady());
     }
 
-    public function test_businessScenario_orderFailure(): void
+    public function testBusinessScenarioOrderFailure(): void
     {
-        $this->order
-            ->setStatus(OrderStatus::INVALID)
-            ->setError('Domain validation failed for example.com');
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::INVALID);
+        $order->setError('Domain validation failed for example.com');
 
-        $this->assertTrue($this->order->isInvalid());
-        $this->assertFalse($this->order->isValid());
-        $this->assertStringContainsString('Domain validation failed', $this->order->getError());
+        $this->assertTrue($order->isInvalid());
+        $this->assertFalse($order->isValid());
+        $error = $order->getError();
+        $this->assertNotNull($error, 'Error should not be null');
+        $this->assertStringContainsString('Domain validation failed', $error);
     }
 
-    public function test_businessScenario_multipleIdentifiers(): void
+    public function testBusinessScenarioMultipleIdentifiers(): void
     {
+        $order = $this->createEntity();
         $id1 = $this->createMock(Identifier::class);
         $id2 = $this->createMock(Identifier::class);
         $id3 = $this->createMock(Identifier::class);
 
-        $this->order
-            ->addOrderIdentifier($id1)
-            ->addOrderIdentifier($id2)
-            ->addOrderIdentifier($id3);
+        $order->addOrderIdentifier($id1);
+        $order->addOrderIdentifier($id2);
+        $order->addOrderIdentifier($id3);
 
-        $this->assertSame(3, $this->order->getOrderIdentifiers()->count());
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($id1));
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($id2));
-        $this->assertTrue($this->order->getOrderIdentifiers()->contains($id3));
+        $this->assertSame(3, $order->getOrderIdentifiers()->count());
+        $this->assertTrue($order->getOrderIdentifiers()->contains($id1));
+        $this->assertTrue($order->getOrderIdentifiers()->contains($id2));
+        $this->assertTrue($order->getOrderIdentifiers()->contains($id3));
     }
 
-    public function test_businessScenario_withCertificate(): void
+    public function testBusinessScenarioWithCertificate(): void
     {
+        $order = $this->createEntity();
         $certificate = $this->createMock(Certificate::class);
 
-        $this->order
-            ->setStatus(OrderStatus::VALID)
-            ->setCertificate($certificate)
-            ->setCertificateUrl('https://acme-v02.api.letsencrypt.org/acme/cert/123456');
+        $order->setStatus(OrderStatus::VALID);
+        $order->setCertificate($certificate);
+        $order->setCertificateUrl('https://acme-v02.api.letsencrypt.org/acme/cert/123456');
 
-        $this->assertTrue($this->order->isValid());
-        $this->assertSame($certificate, $this->order->getCertificate());
-        $this->assertNotNull($this->order->getCertificateUrl());
+        $this->assertTrue($order->isValid());
+        $this->assertSame($certificate, $order->getCertificate());
+        $this->assertNotNull($order->getCertificateUrl());
     }
 
-    public function test_edgeCases_emptyUrls(): void
+    public function testEdgeCasesEmptyUrls(): void
     {
-        $this->order->setOrderUrl('');
-        $this->assertSame('', $this->order->getOrderUrl());
+        $order = $this->createEntity();
+        $order->setOrderUrl('');
+        $this->assertSame('', $order->getOrderUrl());
     }
 
-    public function test_edgeCases_longError(): void
+    public function testEdgeCasesLongError(): void
     {
+        $order = $this->createEntity();
         $longError = str_repeat('Error message. ', 100);
-        $this->order->setError($longError);
+        $order->setError($longError);
 
-        $this->assertSame($longError, $this->order->getError());
+        $this->assertSame($longError, $order->getError());
     }
 
-    public function test_edgeCases_expiresTimeEdgeCase(): void
+    public function testEdgeCasesExpiresTimeEdgeCase(): void
     {
+        $order = $this->createEntity();
+
         // 设置过期时间为1秒后，确保不会过期
         $future = new \DateTimeImmutable('+1 second');
-        $this->order->setExpiresTime($future);
+        $order->setExpiresTime($future);
 
-        $this->assertFalse($this->order->isExpired());
+        $this->assertFalse($order->isExpired());
 
         // 设置过期时间为1秒前，确保已过期
         $past = new \DateTimeImmutable('-1 second');
-        $this->order->setExpiresTime($past);
+        $order->setExpiresTime($past);
 
-        $this->assertTrue($this->order->isExpired());
+        $this->assertTrue($order->isExpired());
     }
 
-    public function test_stateTransitions_pendingToReady(): void
+    public function testStateTransitionsPendingToReady(): void
     {
-        $this->order->setStatus(OrderStatus::PENDING);
-        $this->assertSame(OrderStatus::PENDING, $this->order->getStatus());
-        $this->assertFalse($this->order->isReady());
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::PENDING);
+        $this->assertSame(OrderStatus::PENDING, $order->getStatus());
+        $this->assertFalse($order->isReady());
 
-        $this->order->setStatus(OrderStatus::READY);
-        $this->assertSame(OrderStatus::READY, $this->order->getStatus());
-        $this->assertTrue($this->order->isReady());
+        $order->setStatus(OrderStatus::READY);
+        $this->assertSame(OrderStatus::READY, $order->getStatus());
+        $this->assertTrue($order->isReady());
     }
 
-    public function test_stateTransitions_readyToProcessing(): void
+    public function testStateTransitionsReadyToProcessing(): void
     {
-        $this->order->setStatus(OrderStatus::READY);
-        $this->assertTrue($this->order->isReady());
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::READY);
+        $this->assertTrue($order->isReady());
 
-        $this->order->setStatus(OrderStatus::PROCESSING);
-        $this->assertSame(OrderStatus::PROCESSING, $this->order->getStatus());
-        $this->assertFalse($this->order->isReady());
+        $order->setStatus(OrderStatus::PROCESSING);
+        $this->assertSame(OrderStatus::PROCESSING, $order->getStatus());
+        $this->assertFalse($order->isReady());
     }
 
-    public function test_stateTransitions_processingToValid(): void
+    public function testStateTransitionsProcessingToValid(): void
     {
-        $this->order->setStatus(OrderStatus::PROCESSING);
-        $this->assertFalse($this->order->isValid());
+        $order = $this->createEntity();
+        $order->setStatus(OrderStatus::PROCESSING);
+        $this->assertFalse($order->isValid());
 
-        $this->order->setStatus(OrderStatus::VALID);
-        $this->assertSame(OrderStatus::VALID, $this->order->getStatus());
-        $this->assertTrue($this->order->isValid());
+        $order->setStatus(OrderStatus::VALID);
+        $this->assertSame(OrderStatus::VALID, $order->getStatus());
+        $this->assertTrue($order->isValid());
+    }
+
+    protected function createEntity(): Order
+    {
+        return new Order();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'orderUrl' => ['orderUrl', 'https://acme.example.com/order/123'];
+        yield 'status' => ['status', OrderStatus::VALID];
+        yield 'expiresTime' => ['expiresTime', new \DateTimeImmutable('+7 days')];
+        yield 'error' => ['error', 'Test error'];
+        yield 'finalizeUrl' => ['finalizeUrl', 'https://acme.example.com/finalize/123'];
+        yield 'certificateUrl' => ['certificateUrl', 'https://acme.example.com/cert/123'];
+        yield 'valid' => ['valid', true];
     }
 }

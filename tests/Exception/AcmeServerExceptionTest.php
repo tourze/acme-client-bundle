@@ -4,24 +4,28 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Exception;
 
-use PHPUnit\Framework\TestCase;
-use Tourze\ACMEClientBundle\Exception\AcmeClientException;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
 use Tourze\ACMEClientBundle\Exception\AcmeServerException;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
 /**
  * ACME 服务器异常测试
+ *
+ * @internal
  */
-class AcmeServerExceptionTest extends TestCase
+#[CoversClass(AcmeServerException::class)]
+final class AcmeServerExceptionTest extends AbstractExceptionTestCase
 {
-    public function test_exception_extends_acme_client_exception(): void
+    public function testExceptionExtendsAbstractAcmeException(): void
     {
         $exception = new AcmeServerException();
 
-        $this->assertInstanceOf(AcmeClientException::class, $exception);
+        $this->assertInstanceOf(AbstractAcmeException::class, $exception);
         $this->assertInstanceOf(\Exception::class, $exception);
     }
 
-    public function test_exception_with_default_parameters(): void
+    public function testExceptionWithDefaultParameters(): void
     {
         $exception = new AcmeServerException();
 
@@ -32,7 +36,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertNull($exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_with_custom_message_and_code(): void
+    public function testExceptionWithCustomMessageAndCode(): void
     {
         $message = 'Internal server error';
         $code = 502;
@@ -43,7 +47,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($code, $exception->getCode());
     }
 
-    public function test_exception_with_previous_exception(): void
+    public function testExceptionWithPreviousException(): void
     {
         $previous = new \RuntimeException('Database connection failed');
         $exception = new AcmeServerException('Server error', 500, $previous);
@@ -51,7 +55,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($previous, $exception->getPrevious());
     }
 
-    public function test_exception_with_acme_error_type(): void
+    public function testExceptionWithAcmeErrorType(): void
     {
         $errorType = 'serverInternal';
         $exception = new AcmeServerException('Server error', 500, null, $errorType);
@@ -59,7 +63,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($errorType, $exception->getAcmeErrorType());
     }
 
-    public function test_exception_with_custom_acme_error_type(): void
+    public function testExceptionWithCustomAcmeErrorType(): void
     {
         $errorType = 'badGateway';
         $exception = new AcmeServerException('Bad gateway', 502, null, $errorType);
@@ -67,12 +71,12 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($errorType, $exception->getAcmeErrorType());
     }
 
-    public function test_exception_with_acme_error_details(): void
+    public function testExceptionWithAcmeErrorDetails(): void
     {
         $errorDetails = [
             'type' => 'urn:ietf:params:acme:error:serverInternal',
             'detail' => 'The server experienced an internal error',
-            'status' => 500
+            'status' => 500,
         ];
 
         $exception = new AcmeServerException('Server error', 500, null, 'serverInternal', $errorDetails);
@@ -80,7 +84,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($errorDetails, $exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_with_all_parameters(): void
+    public function testExceptionWithAllParameters(): void
     {
         $message = 'Service temporarily unavailable';
         $code = 503;
@@ -90,7 +94,7 @@ class AcmeServerExceptionTest extends TestCase
             'type' => 'urn:ietf:params:acme:error:serviceUnavailable',
             'detail' => 'The server is temporarily unable to service your request',
             'status' => 503,
-            'retry-after' => 300
+            'retry-after' => 300,
         ];
 
         $exception = new AcmeServerException(
@@ -108,7 +112,7 @@ class AcmeServerExceptionTest extends TestCase
         $this->assertSame($acmeErrorDetails, $exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_can_be_thrown_and_caught(): void
+    public function testExceptionCanBeThrownAndCaught(): void
     {
         $this->expectException(AcmeServerException::class);
         $this->expectExceptionMessage('Test server error');
@@ -117,11 +121,11 @@ class AcmeServerExceptionTest extends TestCase
         throw new AcmeServerException('Test server error', 500);
     }
 
-    public function test_exception_can_be_caught_as_acme_client_exception(): void
+    public function testExceptionCanBeCaughtAsAbstractAcmeException(): void
     {
         try {
             throw new AcmeServerException('Server error test');
-        } catch (AcmeClientException $e) {
+        } catch (AbstractAcmeException $e) {
             $this->assertInstanceOf(AcmeServerException::class, $e);
             $this->assertSame('Server error test', $e->getMessage());
         }
@@ -130,7 +134,7 @@ class AcmeServerExceptionTest extends TestCase
     /**
      * 测试不同的服务器错误状态码
      */
-    public function test_different_server_error_codes(): void
+    public function testDifferentServerErrorCodes(): void
     {
         $testCases = [
             [500, 'Internal Server Error'],
@@ -150,7 +154,7 @@ class AcmeServerExceptionTest extends TestCase
     /**
      * 测试服务器异常的业务逻辑场景
      */
-    public function test_server_maintenance_scenario(): void
+    public function testServerMaintenanceScenario(): void
     {
         $exception = new AcmeServerException(
             'Server under maintenance',
@@ -160,24 +164,25 @@ class AcmeServerExceptionTest extends TestCase
             [
                 'detail' => 'Server is temporarily down for maintenance',
                 'retry-after' => 3600,
-                'maintenance' => true
+                'maintenance' => true,
             ]
         );
 
         // 验证错误详情中包含维护信息
         $details = $exception->getAcmeErrorDetails();
+        $this->assertIsArray($details);
         $this->assertArrayHasKey('maintenance', $details);
         $this->assertTrue($details['maintenance']);
         $this->assertArrayHasKey('retry-after', $details);
         $this->assertSame(3600, $details['retry-after']);
     }
 
-    public function test_inheritance_hierarchy(): void
+    public function testInheritanceHierarchy(): void
     {
         $exception = new AcmeServerException();
 
         $this->assertInstanceOf(AcmeServerException::class, $exception);
-        $this->assertInstanceOf(AcmeClientException::class, $exception);
+        $this->assertInstanceOf(AbstractAcmeException::class, $exception);
         $this->assertInstanceOf(\Exception::class, $exception);
         $this->assertInstanceOf(\Throwable::class, $exception);
     }

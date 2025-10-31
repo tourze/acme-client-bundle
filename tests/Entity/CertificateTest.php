@@ -4,422 +4,452 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Certificate;
 use Tourze\ACMEClientBundle\Entity\Order;
 use Tourze\ACMEClientBundle\Enum\CertificateStatus;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Certificate 实体测试类
+ *
+ * @internal
  */
-class CertificateTest extends TestCase
+#[CoversClass(Certificate::class)]
+final class CertificateTest extends AbstractEntityTestCase
 {
-    private Certificate $certificate;
-
-    protected function setUp(): void
+    public function testConstructorDefaultValues(): void
     {
-        $this->certificate = new Certificate();
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getId());
+        $this->assertNull($certificate->getOrder());
+        $this->assertSame(CertificateStatus::VALID, $certificate->getStatus());
+        $this->assertNull($certificate->getCertificateChainPem());
+        $this->assertNull($certificate->getPrivateKeyPem());
+        $this->assertNull($certificate->getSerialNumber());
+        $this->assertNull($certificate->getFingerprint());
+        $this->assertSame([], $certificate->getDomains());
+        $this->assertNull($certificate->getNotBeforeTime());
+        $this->assertNull($certificate->getNotAfterTime());
+        $this->assertNull($certificate->getIssuer());
+        $this->assertTrue($certificate->isValid());
+        $this->assertNull($certificate->getRevokedTime());
     }
 
-    public function test_constructor_defaultValues(): void
+    public function testOrderGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getId());
-        $this->assertNull($this->certificate->getOrder());
-        $this->assertSame(CertificateStatus::VALID, $this->certificate->getStatus());
-        $this->assertNull($this->certificate->getCertificateChainPem());
-        $this->assertNull($this->certificate->getPrivateKeyPem());
-        $this->assertNull($this->certificate->getSerialNumber());
-        $this->assertNull($this->certificate->getFingerprint());
-        $this->assertSame([], $this->certificate->getDomains());
-        $this->assertNull($this->certificate->getNotBeforeTime());
-        $this->assertNull($this->certificate->getNotAfterTime());
-        $this->assertNull($this->certificate->getIssuer());
-        $this->assertTrue($this->certificate->isValid());
-        $this->assertNull($this->certificate->getRevokedTime());
-    }
-
-    public function test_order_getterSetter(): void
-    {
+        // 使用具体类 Order 进行 Mock，因为需要测试 Certificate 与 Order 的关联关系
+        // Order 是 Doctrine 实体类，没有对应的接口，使用具体类是必要的
         $order = $this->createMock(Order::class);
-        $result = $this->certificate->setOrder($order);
+        $certificate = $this->createEntity();
+        $certificate->setOrder($order);
 
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($order, $this->certificate->getOrder());
+        $this->assertSame($order, $certificate->getOrder());
     }
 
-    public function test_order_setToNull(): void
+    public function testOrderSetToNull(): void
     {
+        // 使用具体类 Order 进行 Mock，因为需要测试 Certificate 与 Order 的关联关系
+        // Order 是 Doctrine 实体类，没有对应的接口，使用具体类是必要的
         $order = $this->createMock(Order::class);
-        $this->certificate->setOrder($order);
+        $certificate = $this->createEntity();
+        $certificate->setOrder($order);
 
-        $this->certificate->setOrder(null);
-        $this->assertNull($this->certificate->getOrder());
+        $certificate->setOrder(null);
+        $this->assertNull($certificate->getOrder());
     }
 
-    public function test_status_getterSetter(): void
+    public function testStatusGetterSetter(): void
     {
-        $this->assertSame(CertificateStatus::VALID, $this->certificate->getStatus());
+        $certificate = $this->createEntity();
+        $this->assertSame(CertificateStatus::VALID, $certificate->getStatus());
 
-        $result = $this->certificate->setStatus(CertificateStatus::REVOKED);
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame(CertificateStatus::REVOKED, $this->certificate->getStatus());
+        $certificate->setStatus(CertificateStatus::REVOKED);
+        $this->assertSame(CertificateStatus::REVOKED, $certificate->getStatus());
     }
 
-    public function test_status_automaticValidFlag(): void
+    public function testStatusAutomaticValidFlag(): void
     {
+        $certificate = $this->createEntity();
+
         // 设置为 VALID 时自动设置 valid 标志为 true
-        $this->certificate->setStatus(CertificateStatus::VALID);
-        $this->assertTrue($this->certificate->isValid());
+        $certificate->setStatus(CertificateStatus::VALID);
+        $this->assertTrue($certificate->isValid());
 
         // 设置为其他状态时 valid 标志为 false
-        $this->certificate->setStatus(CertificateStatus::REVOKED);
-        $this->assertFalse($this->certificate->isValid());
+        $certificate->setStatus(CertificateStatus::REVOKED);
+        $this->assertFalse($certificate->isValid());
 
-        $this->certificate->setStatus(CertificateStatus::EXPIRED);
-        $this->assertFalse($this->certificate->isValid());
+        $certificate->setStatus(CertificateStatus::EXPIRED);
+        $this->assertFalse($certificate->isValid());
     }
 
-    public function test_certificatePem_getterSetter(): void
+    public function testCertificatePemGetterSetter(): void
     {
         $certificatePem = "-----BEGIN CERTIFICATE-----\nMIIFZT...sample certificate...=\n-----END CERTIFICATE-----";
-        $result = $this->certificate->setCertificatePem($certificatePem);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($certificatePem, $this->certificate->getCertificatePem());
+        $certificate = $this->createEntity();
+        $certificate->setCertificatePem($certificatePem);
+        $this->assertSame($certificatePem, $certificate->getCertificatePem());
     }
 
-    public function test_certificateChainPem_getterSetter(): void
+    public function testCertificateChainPemGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getCertificateChainPem());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getCertificateChainPem());
 
         $chainPem = "-----BEGIN CERTIFICATE-----\nMIIFZT...intermediate cert...=\n-----END CERTIFICATE-----";
-        $result = $this->certificate->setCertificateChainPem($chainPem);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($chainPem, $this->certificate->getCertificateChainPem());
+        $certificate->setCertificateChainPem($chainPem);
+        $this->assertSame($chainPem, $certificate->getCertificateChainPem());
     }
 
-    public function test_certificateChainPem_setToNull(): void
+    public function testCertificateChainPemSetToNull(): void
     {
         $chainPem = "-----BEGIN CERTIFICATE-----\nTest\n-----END CERTIFICATE-----";
-        $this->certificate->setCertificateChainPem($chainPem);
-        $this->certificate->setCertificateChainPem(null);
+        $certificate = $this->createEntity();
+        $certificate->setCertificateChainPem($chainPem);
+        $certificate->setCertificateChainPem(null);
 
-        $this->assertNull($this->certificate->getCertificateChainPem());
+        $this->assertNull($certificate->getCertificateChainPem());
     }
 
-    public function test_privateKeyPem_getterSetter(): void
+    public function testPrivateKeyPemGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getPrivateKeyPem());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getPrivateKeyPem());
 
         $privateKey = "-----BEGIN PRIVATE KEY-----\nMIIEvQIB...private key...Q=\n-----END PRIVATE KEY-----";
-        $result = $this->certificate->setPrivateKeyPem($privateKey);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($privateKey, $this->certificate->getPrivateKeyPem());
+        $certificate->setPrivateKeyPem($privateKey);
+        $this->assertSame($privateKey, $certificate->getPrivateKeyPem());
     }
 
-    public function test_privateKeyPem_setToNull(): void
+    public function testPrivateKeyPemSetToNull(): void
     {
         $privateKey = "-----BEGIN PRIVATE KEY-----\nTest\n-----END PRIVATE KEY-----";
-        $this->certificate->setPrivateKeyPem($privateKey);
-        $this->certificate->setPrivateKeyPem(null);
+        $certificate = $this->createEntity();
+        $certificate->setPrivateKeyPem($privateKey);
+        $certificate->setPrivateKeyPem(null);
 
-        $this->assertNull($this->certificate->getPrivateKeyPem());
+        $this->assertNull($certificate->getPrivateKeyPem());
     }
 
-    public function test_serialNumber_getterSetter(): void
+    public function testSerialNumberGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getSerialNumber());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getSerialNumber());
 
         $serialNumber = '03:E7:07:A9:C8:F4:5A:12:34:56:78:90:AB:CD:EF';
-        $result = $this->certificate->setSerialNumber($serialNumber);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($serialNumber, $this->certificate->getSerialNumber());
+        $certificate->setSerialNumber($serialNumber);
+        $this->assertSame($serialNumber, $certificate->getSerialNumber());
     }
 
-    public function test_serialNumber_setToNull(): void
+    public function testSerialNumberSetToNull(): void
     {
-        $this->certificate->setSerialNumber('123456');
-        $this->certificate->setSerialNumber(null);
+        $certificate = $this->createEntity();
+        $certificate->setSerialNumber('123456');
+        $certificate->setSerialNumber(null);
 
-        $this->assertNull($this->certificate->getSerialNumber());
+        $this->assertNull($certificate->getSerialNumber());
     }
 
-    public function test_fingerprint_getterSetter(): void
+    public function testFingerprintGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getFingerprint());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getFingerprint());
 
         $fingerprint = 'SHA256:1234567890ABCDEF1234567890ABCDEF12345678';
-        $result = $this->certificate->setFingerprint($fingerprint);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($fingerprint, $this->certificate->getFingerprint());
+        $certificate->setFingerprint($fingerprint);
+        $this->assertSame($fingerprint, $certificate->getFingerprint());
     }
 
-    public function test_fingerprint_setToNull(): void
+    public function testFingerprintSetToNull(): void
     {
-        $this->certificate->setFingerprint('test_fingerprint');
-        $this->certificate->setFingerprint(null);
+        $certificate = $this->createEntity();
+        $certificate->setFingerprint('test_fingerprint');
+        $certificate->setFingerprint(null);
 
-        $this->assertNull($this->certificate->getFingerprint());
+        $this->assertNull($certificate->getFingerprint());
     }
 
-    public function test_domains_getterSetter(): void
+    public function testDomainsGetterSetter(): void
     {
-        $this->assertSame([], $this->certificate->getDomains());
+        $certificate = $this->createEntity();
+        $this->assertSame([], $certificate->getDomains());
 
         $domains = ['example.com', 'www.example.com', '*.example.com'];
-        $result = $this->certificate->setDomains($domains);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($domains, $this->certificate->getDomains());
+        $certificate->setDomains($domains);
+        $this->assertSame($domains, $certificate->getDomains());
     }
 
-    public function test_domains_setEmpty(): void
+    public function testDomainsSetEmpty(): void
     {
-        $this->certificate->setDomains(['example.com']);
-        $this->certificate->setDomains([]);
+        $certificate = $this->createEntity();
+        $certificate->setDomains(['example.com']);
+        $certificate->setDomains([]);
 
-        $this->assertSame([], $this->certificate->getDomains());
+        $this->assertSame([], $certificate->getDomains());
     }
 
-    public function test_notBeforeTime_getterSetter(): void
+    public function testNotBeforeTimeGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getNotBeforeTime());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getNotBeforeTime());
 
         $notBefore = new \DateTimeImmutable('-1 day');
-        $result = $this->certificate->setNotBeforeTime($notBefore);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($notBefore, $this->certificate->getNotBeforeTime());
+        $certificate->setNotBeforeTime($notBefore);
+        $this->assertSame($notBefore, $certificate->getNotBeforeTime());
     }
 
-    public function test_notBeforeTime_setToNull(): void
+    public function testNotBeforeTimeSetToNull(): void
     {
-        $this->certificate->setNotBeforeTime(new \DateTimeImmutable());
-        $this->certificate->setNotBeforeTime(null);
+        $certificate = $this->createEntity();
+        $certificate->setNotBeforeTime(new \DateTimeImmutable());
+        $certificate->setNotBeforeTime(null);
 
-        $this->assertNull($this->certificate->getNotBeforeTime());
+        $this->assertNull($certificate->getNotBeforeTime());
     }
 
-    public function test_notAfterTime_getterSetter(): void
+    public function testNotAfterTimeGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getNotAfterTime());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getNotAfterTime());
 
         $notAfter = new \DateTimeImmutable('+90 days');
-        $result = $this->certificate->setNotAfterTime($notAfter);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($notAfter, $this->certificate->getNotAfterTime());
+        $certificate->setNotAfterTime($notAfter);
+        $this->assertSame($notAfter, $certificate->getNotAfterTime());
     }
 
-    public function test_notAfterTime_setToNull(): void
+    public function testNotAfterTimeSetToNull(): void
     {
-        $this->certificate->setNotAfterTime(new \DateTimeImmutable());
-        $this->certificate->setNotAfterTime(null);
+        $certificate = $this->createEntity();
+        $certificate->setNotAfterTime(new \DateTimeImmutable());
+        $certificate->setNotAfterTime(null);
 
-        $this->assertNull($this->certificate->getNotAfterTime());
+        $this->assertNull($certificate->getNotAfterTime());
     }
 
-    public function test_issuer_getterSetter(): void
+    public function testIssuerGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getIssuer());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getIssuer());
 
         $issuer = 'CN=Let\'s Encrypt Authority X3,O=Let\'s Encrypt,C=US';
-        $result = $this->certificate->setIssuer($issuer);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($issuer, $this->certificate->getIssuer());
+        $certificate->setIssuer($issuer);
+        $this->assertSame($issuer, $certificate->getIssuer());
     }
 
-    public function test_issuer_setToNull(): void
+    public function testIssuerSetToNull(): void
     {
-        $this->certificate->setIssuer('Test Issuer');
-        $this->certificate->setIssuer(null);
+        $certificate = $this->createEntity();
+        $certificate->setIssuer('Test Issuer');
+        $certificate->setIssuer(null);
 
-        $this->assertNull($this->certificate->getIssuer());
+        $this->assertNull($certificate->getIssuer());
     }
 
-    public function test_valid_getterSetter(): void
+    public function testValidGetterSetter(): void
     {
-        $this->assertTrue($this->certificate->isValid());
+        $certificate = $this->createEntity();
+        $this->assertTrue($certificate->isValid());
 
-        $result = $this->certificate->setValid(false);
-        $this->assertSame($this->certificate, $result);
-        $this->assertFalse($this->certificate->isValid());
+        $certificate->setValid(false);
+        $this->assertFalse($certificate->isValid());
 
-        $this->certificate->setValid(true);
-        $this->assertTrue($this->certificate->isValid());
+        $certificate->setValid(true);
+        $this->assertTrue($certificate->isValid());
     }
 
-    public function test_revokedTime_getterSetter(): void
+    public function testRevokedTimeGetterSetter(): void
     {
-        $this->assertNull($this->certificate->getRevokedTime());
+        $certificate = $this->createEntity();
+        $this->assertNull($certificate->getRevokedTime());
 
         $revokedTime = new \DateTimeImmutable();
-        $result = $this->certificate->setRevokedTime($revokedTime);
-
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($revokedTime, $this->certificate->getRevokedTime());
+        $certificate->setRevokedTime($revokedTime);
+        $this->assertSame($revokedTime, $certificate->getRevokedTime());
     }
 
-    public function test_revokedTime_setToNull(): void
+    public function testRevokedTimeSetToNull(): void
     {
-        $this->certificate->setRevokedTime(new \DateTimeImmutable());
-        $this->certificate->setRevokedTime(null);
+        $certificate = $this->createEntity();
+        $certificate->setRevokedTime(new \DateTimeImmutable());
+        $certificate->setRevokedTime(null);
 
-        $this->assertNull($this->certificate->getRevokedTime());
+        $this->assertNull($certificate->getRevokedTime());
     }
 
-    public function test_isExpired_withNullNotAfterTime(): void
+    public function testIsExpiredWithNullNotAfterTime(): void
     {
-        $this->certificate->setNotAfterTime(null);
-        $this->assertFalse($this->certificate->isExpired());
+        $certificate = $this->createEntity();
+        $certificate->setNotAfterTime(null);
+        $this->assertFalse($certificate->isExpired());
     }
 
-    public function test_isExpired_withFutureDate(): void
+    public function testIsExpiredWithFutureDate(): void
     {
+        $certificate = $this->createEntity();
         $futureDate = new \DateTimeImmutable('+30 days');
-        $this->certificate->setNotAfterTime($futureDate);
-        $this->assertFalse($this->certificate->isExpired());
+        $certificate->setNotAfterTime($futureDate);
+        $this->assertFalse($certificate->isExpired());
     }
 
-    public function test_isExpired_withPastDate(): void
+    public function testIsExpiredWithPastDate(): void
     {
+        $certificate = $this->createEntity();
         $pastDate = new \DateTimeImmutable('-1 day');
-        $this->certificate->setNotAfterTime($pastDate);
-        $this->assertTrue($this->certificate->isExpired());
+        $certificate->setNotAfterTime($pastDate);
+        $this->assertTrue($certificate->isExpired());
     }
 
-    public function test_isRevoked(): void
+    public function testIsRevoked(): void
     {
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate = $this->createEntity();
+        $this->assertFalse($certificate->isRevoked());
 
-        $this->certificate->setStatus(CertificateStatus::REVOKED);
-        $this->assertTrue($this->certificate->isRevoked());
+        $certificate->setStatus(CertificateStatus::REVOKED);
+        $this->assertTrue($certificate->isRevoked());
 
-        $this->certificate->setStatus(CertificateStatus::VALID);
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate->setStatus(CertificateStatus::VALID);
+        $this->assertFalse($certificate->isRevoked());
     }
 
-    public function test_isExpiringWithin_defaultDays(): void
+    public function testIsExpiringWithinDefaultDays(): void
     {
+        $certificate = $this->createEntity();
+
         // 默认 30 天
         $notAfter = new \DateTimeImmutable('+20 days');
-        $this->certificate->setNotAfterTime($notAfter);
-        $this->assertTrue($this->certificate->isExpiringWithin());
+        $certificate->setNotAfterTime($notAfter);
+        $this->assertTrue($certificate->isExpiringWithin());
 
         $notAfter = new \DateTimeImmutable('+40 days');
-        $this->certificate->setNotAfterTime($notAfter);
-        $this->assertFalse($this->certificate->isExpiringWithin());
+        $certificate->setNotAfterTime($notAfter);
+        $this->assertFalse($certificate->isExpiringWithin());
     }
 
-    public function test_isExpiringWithin_customDays(): void
+    public function testIsExpiringWithinCustomDays(): void
     {
+        $certificate = $this->createEntity();
+
         $notAfter = new \DateTimeImmutable('+10 days');
-        $this->certificate->setNotAfterTime($notAfter);
+        $certificate->setNotAfterTime($notAfter);
 
-        $this->assertTrue($this->certificate->isExpiringWithin(15));
-        $this->assertFalse($this->certificate->isExpiringWithin(5));
+        $this->assertTrue($certificate->isExpiringWithin(15));
+        $this->assertFalse($certificate->isExpiringWithin(5));
     }
 
-    public function test_isExpiringWithin_withNullNotAfterTime(): void
+    public function testIsExpiringWithinWithNullNotAfterTime(): void
     {
-        $this->certificate->setNotAfterTime(null);
-        $this->assertFalse($this->certificate->isExpiringWithin());
+        $certificate = $this->createEntity();
+        $certificate->setNotAfterTime(null);
+        $this->assertFalse($certificate->isExpiringWithin());
     }
 
-    public function test_getDaysUntilExpiry_withNullNotAfterTime(): void
+    public function testGetDaysUntilExpiryWithNullNotAfterTime(): void
     {
-        $this->certificate->setNotAfterTime(null);
-        $this->assertNull($this->certificate->getDaysUntilExpiry());
+        $certificate = $this->createEntity();
+        $certificate->setNotAfterTime(null);
+        $this->assertNull($certificate->getDaysUntilExpiry());
     }
 
-    public function test_getDaysUntilExpiry_withFutureDate(): void
+    public function testGetDaysUntilExpiryWithFutureDate(): void
     {
+        $certificate = $this->createEntity();
+
         // 设置一个确定的未来日期来避免时间相关的测试问题
         $futureDate = new \DateTimeImmutable('+30 days');
-        $this->certificate->setNotAfterTime($futureDate);
+        $certificate->setNotAfterTime($futureDate);
 
-        $days = $this->certificate->getDaysUntilExpiry();
+        $days = $certificate->getDaysUntilExpiry();
         $this->assertIsInt($days);
         $this->assertGreaterThanOrEqual(29, $days); // 允许一些时间误差
         $this->assertLessThanOrEqual(30, $days);
     }
 
-    public function test_getDaysUntilExpiry_withPastDate(): void
+    public function testGetDaysUntilExpiryWithPastDate(): void
     {
-        $pastDate = new \DateTimeImmutable('-5 days');
-        $this->certificate->setNotAfterTime($pastDate);
+        $certificate = $this->createEntity();
 
-        $days = $this->certificate->getDaysUntilExpiry();
+        $pastDate = new \DateTimeImmutable('-5 days');
+        $certificate->setNotAfterTime($pastDate);
+
+        $days = $certificate->getDaysUntilExpiry();
         $this->assertIsInt($days);
         $this->assertLessThan(0, $days);
     }
 
-    public function test_getFullChainPem_withoutChain(): void
+    public function testGetFullChainPemWithoutChain(): void
     {
-        $certificatePem = "-----BEGIN CERTIFICATE-----\nCert Content\n-----END CERTIFICATE-----";
-        $this->certificate->setCertificatePem($certificatePem);
+        $certificate = $this->createEntity();
 
-        $this->assertSame($certificatePem, $this->certificate->getFullChainPem());
+        $certificatePem = "-----BEGIN CERTIFICATE-----\nCert Content\n-----END CERTIFICATE-----";
+        $certificate->setCertificatePem($certificatePem);
+
+        $this->assertSame($certificatePem, $certificate->getFullChainPem());
     }
 
-    public function test_getFullChainPem_withChain(): void
+    public function testGetFullChainPemWithChain(): void
     {
+        $certificate = $this->createEntity();
+
         $certificatePem = "-----BEGIN CERTIFICATE-----\nCert Content\n-----END CERTIFICATE-----";
         $chainPem = "-----BEGIN CERTIFICATE-----\nChain Content\n-----END CERTIFICATE-----";
 
-        $this->certificate
-            ->setCertificatePem($certificatePem)
-            ->setCertificateChainPem($chainPem);
+        $certificate->setCertificatePem($certificatePem);
+        $certificate->setCertificateChainPem($chainPem);
 
         $expected = $certificatePem . "\n" . $chainPem;
-        $this->assertSame($expected, $this->certificate->getFullChainPem());
+        $this->assertSame($expected, $certificate->getFullChainPem());
     }
 
-    public function test_containsDomain(): void
+    public function testContainsDomain(): void
     {
+        $certificate = $this->createEntity();
+
         $domains = ['example.com', 'www.example.com', '*.example.com'];
-        $this->certificate->setDomains($domains);
+        $certificate->setDomains($domains);
 
-        $this->assertTrue($this->certificate->containsDomain('example.com'));
-        $this->assertTrue($this->certificate->containsDomain('www.example.com'));
-        $this->assertTrue($this->certificate->containsDomain('*.example.com'));
-        $this->assertFalse($this->certificate->containsDomain('subdomain.example.com'));
-        $this->assertFalse($this->certificate->containsDomain('other.com'));
+        $this->assertTrue($certificate->containsDomain('example.com'));
+        $this->assertTrue($certificate->containsDomain('www.example.com'));
+        $this->assertTrue($certificate->containsDomain('*.example.com'));
+        $this->assertFalse($certificate->containsDomain('subdomain.example.com'));
+        $this->assertFalse($certificate->containsDomain('other.com'));
     }
 
-    public function test_containsDomain_emptyDomains(): void
+    public function testContainsDomainEmptyDomains(): void
     {
-        $this->certificate->setDomains([]);
-        $this->assertFalse($this->certificate->containsDomain('example.com'));
+        $certificate = $this->createEntity();
+        $certificate->setDomains([]);
+        $this->assertFalse($certificate->containsDomain('example.com'));
     }
 
-    public function test_toString(): void
+    public function testToString(): void
     {
-        $this->certificate->setSerialNumber('ABC123');
+        $certificate = $this->createEntity();
+        $certificate->setSerialNumber('ABC123');
 
         $expected = 'Certificate #0 (ABC123)';
-        $this->assertSame($expected, (string) $this->certificate);
+        $this->assertSame($expected, (string) $certificate);
     }
 
-    public function test_toString_withoutSerialNumber(): void
+    public function testToStringWithoutSerialNumber(): void
     {
+        $certificate = $this->createEntity();
         $expected = 'Certificate #0 (Unknown)';
-        $this->assertSame($expected, (string) $this->certificate);
+        $this->assertSame($expected, (string) $certificate);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->certificate);
+        $certificate = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $certificate);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        // 使用具体类 Order 进行 Mock，因为需要测试 Certificate 与 Order 的关联关系
+        // Order 是 Doctrine 实体类，没有对应的接口，使用具体类是必要的
         $order = $this->createMock(Order::class);
+        $certificate = $this->createEntity();
         $certificatePem = "-----BEGIN CERTIFICATE-----\nTest\n-----END CERTIFICATE-----";
         $chainPem = "-----BEGIN CERTIFICATE-----\nChain\n-----END CERTIFICATE-----";
         $privateKey = "-----BEGIN PRIVATE KEY-----\nKey\n-----END PRIVATE KEY-----";
@@ -431,197 +461,241 @@ class CertificateTest extends TestCase
         $issuer = 'Test CA';
         $revokedTime = new \DateTimeImmutable();
 
-        $result = $this->certificate
-            ->setOrder($order)
-            ->setStatus(CertificateStatus::VALID)
-            ->setCertificatePem($certificatePem)
-            ->setCertificateChainPem($chainPem)
-            ->setPrivateKeyPem($privateKey)
-            ->setSerialNumber($serialNumber)
-            ->setFingerprint($fingerprint)
-            ->setDomains($domains)
-            ->setNotBeforeTime($notBefore)
-            ->setNotAfterTime($notAfter)
-            ->setIssuer($issuer)
-            ->setValid(true)
-            ->setRevokedTime($revokedTime);
+        $certificate->setOrder($order);
+        $certificate->setStatus(CertificateStatus::VALID);
+        $certificate->setCertificatePem($certificatePem);
+        $certificate->setCertificateChainPem($chainPem);
+        $certificate->setPrivateKeyPem($privateKey);
+        $certificate->setSerialNumber($serialNumber);
+        $certificate->setFingerprint($fingerprint);
+        $certificate->setDomains($domains);
+        $certificate->setNotBeforeTime($notBefore);
+        $certificate->setNotAfterTime($notAfter);
+        $certificate->setIssuer($issuer);
+        $certificate->setValid(true);
+        $certificate->setRevokedTime($revokedTime);
+        $result = $certificate;
 
-        $this->assertSame($this->certificate, $result);
-        $this->assertSame($order, $this->certificate->getOrder());
-        $this->assertSame(CertificateStatus::VALID, $this->certificate->getStatus());
-        $this->assertSame($certificatePem, $this->certificate->getCertificatePem());
-        $this->assertSame($chainPem, $this->certificate->getCertificateChainPem());
-        $this->assertSame($privateKey, $this->certificate->getPrivateKeyPem());
-        $this->assertSame($serialNumber, $this->certificate->getSerialNumber());
-        $this->assertSame($fingerprint, $this->certificate->getFingerprint());
-        $this->assertSame($domains, $this->certificate->getDomains());
-        $this->assertSame($notBefore, $this->certificate->getNotBeforeTime());
-        $this->assertSame($notAfter, $this->certificate->getNotAfterTime());
-        $this->assertSame($issuer, $this->certificate->getIssuer());
-        $this->assertTrue($this->certificate->isValid());
-        $this->assertSame($revokedTime, $this->certificate->getRevokedTime());
+        $this->assertSame($certificate, $result);
+        $this->assertSame($order, $certificate->getOrder());
+        $this->assertSame(CertificateStatus::VALID, $certificate->getStatus());
+        $this->assertSame($certificatePem, $certificate->getCertificatePem());
+        $this->assertSame($chainPem, $certificate->getCertificateChainPem());
+        $this->assertSame($privateKey, $certificate->getPrivateKeyPem());
+        $this->assertSame($serialNumber, $certificate->getSerialNumber());
+        $this->assertSame($fingerprint, $certificate->getFingerprint());
+        $this->assertSame($domains, $certificate->getDomains());
+        $this->assertSame($notBefore, $certificate->getNotBeforeTime());
+        $this->assertSame($notAfter, $certificate->getNotAfterTime());
+        $this->assertSame($issuer, $certificate->getIssuer());
+        $this->assertTrue($certificate->isValid());
+        $this->assertSame($revokedTime, $certificate->getRevokedTime());
     }
 
-    public function test_businessScenario_certificateIssuance(): void
+    public function testBusinessScenarioCertificateIssuance(): void
     {
+        // 使用具体类 Order 进行 Mock，因为需要测试 Certificate 与 Order 的关联关系
+        // Order 是 Doctrine 实体类，没有对应的接口，使用具体类是必要的
         $order = $this->createMock(Order::class);
+        $certificate = $this->createEntity();
 
-        $this->certificate
-            ->setOrder($order)
-            ->setStatus(CertificateStatus::VALID)
-            ->setCertificatePem("-----BEGIN CERTIFICATE-----\nValid Cert\n-----END CERTIFICATE-----")
-            ->setSerialNumber('12345678901234567890')
-            ->setDomains(['example.com', 'www.example.com'])
-            ->setNotBeforeTime(new \DateTimeImmutable('-1 day'))
-            ->setNotAfterTime(new \DateTimeImmutable('+90 days'))
-            ->setIssuer('CN=Let\'s Encrypt Authority X3');
+        $certificate->setOrder($order);
+        $certificate->setStatus(CertificateStatus::VALID);
+        $certificate->setCertificatePem("-----BEGIN CERTIFICATE-----\nValid Cert\n-----END CERTIFICATE-----");
+        $certificate->setSerialNumber('12345678901234567890');
+        $certificate->setDomains(['example.com', 'www.example.com']);
+        $certificate->setNotBeforeTime(new \DateTimeImmutable('-1 day'));
+        $certificate->setNotAfterTime(new \DateTimeImmutable('+90 days'));
+        $certificate->setIssuer('CN=Let\'s Encrypt Authority X3');
 
-        $this->assertSame(CertificateStatus::VALID, $this->certificate->getStatus());
-        $this->assertTrue($this->certificate->isValid());
-        $this->assertFalse($this->certificate->isExpired());
-        $this->assertFalse($this->certificate->isRevoked());
-        $this->assertTrue($this->certificate->containsDomain('example.com'));
+        $this->assertSame(CertificateStatus::VALID, $certificate->getStatus());
+        $this->assertTrue($certificate->isValid());
+        $this->assertFalse($certificate->isExpired());
+        $this->assertFalse($certificate->isRevoked());
+        $this->assertTrue($certificate->containsDomain('example.com'));
     }
 
-    public function test_businessScenario_certificateExpiration(): void
+    public function testBusinessScenarioCertificateExpiration(): void
     {
-        $this->certificate
-            ->setStatus(CertificateStatus::EXPIRED)
-            ->setNotAfterTime(new \DateTimeImmutable('-10 days'));
+        $certificate = $this->createEntity();
 
-        $this->assertSame(CertificateStatus::EXPIRED, $this->certificate->getStatus());
-        $this->assertFalse($this->certificate->isValid());
-        $this->assertTrue($this->certificate->isExpired());
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate->setStatus(CertificateStatus::EXPIRED);
+        $certificate->setNotAfterTime(new \DateTimeImmutable('-10 days'));
+
+        $this->assertSame(CertificateStatus::EXPIRED, $certificate->getStatus());
+        $this->assertFalse($certificate->isValid());
+        $this->assertTrue($certificate->isExpired());
+        $this->assertFalse($certificate->isRevoked());
     }
 
-    public function test_businessScenario_certificateRevocation(): void
+    public function testBusinessScenarioCertificateRevocation(): void
     {
+        $certificate = $this->createEntity();
         $revokedTime = new \DateTimeImmutable();
 
-        $this->certificate
-            ->setStatus(CertificateStatus::REVOKED)
-            ->setRevokedTime($revokedTime);
+        $certificate->setStatus(CertificateStatus::REVOKED);
+        $certificate->setRevokedTime($revokedTime);
 
-        $this->assertSame(CertificateStatus::REVOKED, $this->certificate->getStatus());
-        $this->assertFalse($this->certificate->isValid());
-        $this->assertTrue($this->certificate->isRevoked());
-        $this->assertSame($revokedTime, $this->certificate->getRevokedTime());
+        $this->assertSame(CertificateStatus::REVOKED, $certificate->getStatus());
+        $this->assertFalse($certificate->isValid());
+        $this->assertTrue($certificate->isRevoked());
+        $this->assertSame($revokedTime, $certificate->getRevokedTime());
     }
 
-    public function test_businessScenario_certificateRenewal(): void
+    public function testBusinessScenarioCertificateRenewal(): void
     {
+        $certificate = $this->createEntity();
+
         // 证书即将过期，需要更新
         $notAfter = new \DateTimeImmutable('+15 days');
-        $this->certificate->setNotAfterTime($notAfter);
+        $certificate->setNotAfterTime($notAfter);
 
-        $this->assertTrue($this->certificate->isExpiringWithin(30));
-        $this->assertTrue($this->certificate->isExpiringWithin(20));
-        $this->assertFalse($this->certificate->isExpiringWithin(10));
+        $this->assertTrue($certificate->isExpiringWithin(30));
+        $this->assertTrue($certificate->isExpiringWithin(20));
+        $this->assertFalse($certificate->isExpiringWithin(10));
 
-        $days = $this->certificate->getDaysUntilExpiry();
+        $days = $certificate->getDaysUntilExpiry();
         $this->assertGreaterThan(10, $days);
         $this->assertLessThan(20, $days);
     }
 
-    public function test_businessScenario_wildcardCertificate(): void
+    public function testBusinessScenarioWildcardCertificate(): void
     {
-        $domains = ['*.example.com', 'example.com'];
-        $this->certificate->setDomains($domains);
+        $certificate = $this->createEntity();
 
-        $this->assertTrue($this->certificate->containsDomain('*.example.com'));
-        $this->assertTrue($this->certificate->containsDomain('example.com'));
-        $this->assertFalse($this->certificate->containsDomain('sub.example.com')); // 实际验证需要更复杂的逻辑
+        $domains = ['*.example.com', 'example.com'];
+        $certificate->setDomains($domains);
+
+        $this->assertTrue($certificate->containsDomain('*.example.com'));
+        $this->assertTrue($certificate->containsDomain('example.com'));
+        $this->assertFalse($certificate->containsDomain('sub.example.com')); // 实际验证需要更复杂的逻辑
     }
 
-    public function test_businessScenario_certificateChainManagement(): void
+    public function testBusinessScenarioCertificateChainManagement(): void
     {
+        $certificate = $this->createEntity();
+
         $leafCert = "-----BEGIN CERTIFICATE-----\nLeaf Cert\n-----END CERTIFICATE-----";
         $intermediateCert = "-----BEGIN CERTIFICATE-----\nIntermediate Cert\n-----END CERTIFICATE-----";
 
-        $this->certificate
-            ->setCertificatePem($leafCert)
-            ->setCertificateChainPem($intermediateCert);
+        $certificate->setCertificatePem($leafCert);
+        $certificate->setCertificateChainPem($intermediateCert);
 
-        $fullChain = $this->certificate->getFullChainPem();
+        $fullChain = $certificate->getFullChainPem();
         $this->assertStringContainsString('Leaf Cert', $fullChain);
         $this->assertStringContainsString('Intermediate Cert', $fullChain);
         $this->assertStringContainsString($leafCert, $fullChain);
         $this->assertStringContainsString($intermediateCert, $fullChain);
     }
 
-    public function test_edgeCases_veryLongDomainList(): void
+    public function testEdgeCasesVeryLongDomainList(): void
     {
+        $certificate = $this->createEntity();
+
         $domains = [];
-        for ($i = 1; $i <= 100; $i++) {
+        for ($i = 1; $i <= 100; ++$i) {
             $domains[] = "subdomain{$i}.example.com";
         }
 
-        $this->certificate->setDomains($domains);
-        $this->assertCount(100, $this->certificate->getDomains());
-        $this->assertTrue($this->certificate->containsDomain('subdomain50.example.com'));
-        $this->assertFalse($this->certificate->containsDomain('subdomain101.example.com'));
+        $certificate->setDomains($domains);
+        $this->assertCount(100, $certificate->getDomains());
+        $this->assertTrue($certificate->containsDomain('subdomain50.example.com'));
+        $this->assertFalse($certificate->containsDomain('subdomain101.example.com'));
     }
 
-    public function test_edgeCases_emptyPemContent(): void
+    public function testEdgeCasesEmptyPemContent(): void
     {
-        $this->certificate->setCertificatePem('');
-        $this->assertSame('', $this->certificate->getCertificatePem());
-        $this->assertSame('', $this->certificate->getFullChainPem());
+        $certificate = $this->createEntity();
+        $certificate->setCertificatePem('');
+        $this->assertSame('', $certificate->getCertificatePem());
+        $this->assertSame('', $certificate->getFullChainPem());
     }
 
-    public function test_edgeCases_longSerialNumber(): void
+    public function testEdgeCasesLongSerialNumber(): void
     {
+        $certificate = $this->createEntity();
         $longSerial = str_repeat('A', 255);
-        $this->certificate->setSerialNumber($longSerial);
+        $certificate->setSerialNumber($longSerial);
 
-        $this->assertSame($longSerial, $this->certificate->getSerialNumber());
+        $this->assertSame($longSerial, $certificate->getSerialNumber());
     }
 
-    public function test_stateTransitions_validToExpired(): void
+    public function testStateTransitionsValidToExpired(): void
     {
-        $this->certificate->setStatus(CertificateStatus::VALID);
-        $this->assertTrue($this->certificate->isValid());
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate = $this->createEntity();
 
-        $this->certificate->setStatus(CertificateStatus::EXPIRED);
-        $this->assertFalse($this->certificate->isValid());
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate->setStatus(CertificateStatus::VALID);
+        $this->assertTrue($certificate->isValid());
+        $this->assertFalse($certificate->isRevoked());
+
+        $certificate->setStatus(CertificateStatus::EXPIRED);
+        $this->assertFalse($certificate->isValid());
+        $this->assertFalse($certificate->isRevoked());
     }
 
-    public function test_stateTransitions_validToRevoked(): void
+    public function testStateTransitionsValidToRevoked(): void
     {
-        $this->certificate->setStatus(CertificateStatus::VALID);
-        $this->assertTrue($this->certificate->isValid());
-        $this->assertFalse($this->certificate->isRevoked());
+        $certificate = $this->createEntity();
 
-        $this->certificate->setStatus(CertificateStatus::REVOKED);
-        $this->assertFalse($this->certificate->isValid());
-        $this->assertTrue($this->certificate->isRevoked());
+        $certificate->setStatus(CertificateStatus::VALID);
+        $this->assertTrue($certificate->isValid());
+        $this->assertFalse($certificate->isRevoked());
+
+        $certificate->setStatus(CertificateStatus::REVOKED);
+        $this->assertFalse($certificate->isValid());
+        $this->assertTrue($certificate->isRevoked());
     }
 
-    public function test_timeRelatedMethods_edgeCases(): void
+    public function testTimeRelatedMethodsEdgeCases(): void
     {
+        $certificate = $this->createEntity();
+
         // 测试时间边界情况
         $now = new \DateTimeImmutable();
-        $this->certificate->setNotAfterTime($now);
+        $certificate->setNotAfterTime($now);
 
         // 由于时间精度问题，这个测试可能会有微小差异
-        $isExpired = $this->certificate->isExpired();
+        $isExpired = $certificate->isExpired();
 
-        $days = $this->certificate->getDaysUntilExpiry();
+        $days = $certificate->getDaysUntilExpiry();
         $this->assertIsInt($days);
         $this->assertLessThanOrEqual(1, abs($days)); // 应该非常接近 0
     }
 
-    public function test_domainCaseSensitivity(): void
+    public function testDomainCaseSensitivity(): void
     {
-        $this->certificate->setDomains(['Example.Com', 'WWW.EXAMPLE.COM']);
+        $certificate = $this->createEntity();
+
+        $certificate->setDomains(['Example.Com', 'WWW.EXAMPLE.COM']);
 
         // 域名检查是区分大小写的（按当前实现）
-        $this->assertTrue($this->certificate->containsDomain('Example.Com'));
-        $this->assertFalse($this->certificate->containsDomain('example.com'));
-        $this->assertTrue($this->certificate->containsDomain('WWW.EXAMPLE.COM'));
-        $this->assertFalse($this->certificate->containsDomain('www.example.com'));
+        $this->assertTrue($certificate->containsDomain('Example.Com'));
+        $this->assertFalse($certificate->containsDomain('example.com'));
+        $this->assertTrue($certificate->containsDomain('WWW.EXAMPLE.COM'));
+        $this->assertFalse($certificate->containsDomain('www.example.com'));
+    }
+
+    protected function createEntity(): Certificate
+    {
+        return new Certificate();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'status' => ['status', CertificateStatus::VALID];
+        yield 'certificatePem' => ['certificatePem', '-----BEGIN CERTIFICATE-----\nTest\n-----END CERTIFICATE-----'];
+        yield 'certificateChainPem' => ['certificateChainPem', '-----BEGIN CERTIFICATE-----\nChain\n-----END CERTIFICATE-----'];
+        yield 'privateKeyPem' => ['privateKeyPem', '-----BEGIN PRIVATE KEY-----\nKey\n-----END PRIVATE KEY-----'];
+        yield 'serialNumber' => ['serialNumber', 'ABC123'];
+        yield 'fingerprint' => ['fingerprint', 'SHA256:test'];
+        yield 'domains' => ['domains', ['example.com']];
+        yield 'notBeforeTime' => ['notBeforeTime', new \DateTimeImmutable('-1 day')];
+        yield 'notAfterTime' => ['notAfterTime', new \DateTimeImmutable('+90 days')];
+        yield 'issuer' => ['issuer', 'Test CA'];
+        yield 'valid' => ['valid', true];
+        yield 'revokedTime' => ['revokedTime', new \DateTimeImmutable()];
     }
 }

@@ -5,348 +5,323 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Account;
 use Tourze\ACMEClientBundle\Entity\Order;
 use Tourze\ACMEClientBundle\Enum\AccountStatus;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Account 实体测试类
+ *
+ * @internal
  */
-class AccountTest extends TestCase
+#[CoversClass(Account::class)]
+final class AccountTest extends AbstractEntityTestCase
 {
-    private Account $account;
-
-    protected function setUp(): void
-    {
-        $this->account = new Account();
-    }
-
-    public function test_constructor_defaultValues(): void
-    {
-        $this->assertNull($this->account->getId());
-        $this->assertNull($this->account->getAccountUrl());
-        $this->assertSame(AccountStatus::PENDING, $this->account->getStatus());
-        $this->assertNull($this->account->getContacts());
-        $this->assertFalse($this->account->isTermsOfServiceAgreed());
-        $this->assertFalse($this->account->isValid());
-        $this->assertInstanceOf(ArrayCollection::class, $this->account->getOrders());
-        $this->assertTrue($this->account->getOrders()->isEmpty());
-    }
-
-    public function test_acmeServerUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/directory';
-        $result = $this->account->setAcmeServerUrl($url);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($url, $this->account->getAcmeServerUrl());
-    }
-
-    public function test_accountUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/acct/123456';
-        $result = $this->account->setAccountUrl($url);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($url, $this->account->getAccountUrl());
-    }
-
-    public function test_accountUrl_setToNull(): void
-    {
-        $this->account->setAccountUrl('https://example.com/acct/123');
-        $this->account->setAccountUrl(null);
-
-        $this->assertNull($this->account->getAccountUrl());
-    }
-
-    public function test_privateKey_getterSetter(): void
-    {
-        $privateKey = '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7VJTUt9Us8cKBAC...\n-----END PRIVATE KEY-----';
-        $result = $this->account->setPrivateKey($privateKey);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($privateKey, $this->account->getPrivateKey());
-    }
-
-    public function test_publicKeyJwk_getterSetter(): void
-    {
-        $jwk = '{"kty":"RSA","n":"u1SU1LfVLPHCgQC...","e":"AQAB"}';
-        $result = $this->account->setPublicKeyJwk($jwk);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($jwk, $this->account->getPublicKeyJwk());
-    }
-
-    public function test_status_getterSetter(): void
-    {
-        $this->assertSame(AccountStatus::PENDING, $this->account->getStatus());
-
-        $result = $this->account->setStatus(AccountStatus::VALID);
-        $this->assertSame($this->account, $result);
-        $this->assertSame(AccountStatus::VALID, $this->account->getStatus());
-    }
-
-    public function test_status_automaticValidFlag(): void
+    public function testStatusAutomaticValidFlag(): void
     {
         // 设置为 VALID 时自动设置 valid 标志为 true
-        $this->account->setStatus(AccountStatus::VALID);
-        $this->assertTrue($this->account->isValid());
+        $account = $this->createEntity();
+        $account->setStatus(AccountStatus::VALID);
+        $this->assertTrue($account->isValid());
 
         // 设置为其他状态时 valid 标志为 false
-        $this->account->setStatus(AccountStatus::PENDING);
-        $this->assertFalse($this->account->isValid());
+        $account->setStatus(AccountStatus::PENDING);
+        $this->assertFalse($account->isValid());
 
-        $this->account->setStatus(AccountStatus::DEACTIVATED);
-        $this->assertFalse($this->account->isValid());
+        $account->setStatus(AccountStatus::DEACTIVATED);
+        $this->assertFalse($account->isValid());
     }
 
-    public function test_contacts_getterSetter(): void
+    public function testOrdersCollection(): void
     {
-        $contacts = ['mailto:admin@example.com', 'mailto:support@example.com'];
-        $result = $this->account->setContacts($contacts);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($contacts, $this->account->getContacts());
-    }
-
-    public function test_contacts_setToNull(): void
-    {
-        $this->account->setContacts(['mailto:test@example.com']);
-        $this->account->setContacts(null);
-
-        $this->assertNull($this->account->getContacts());
-    }
-
-    public function test_termsOfServiceAgreed_getterSetter(): void
-    {
-        $this->assertFalse($this->account->isTermsOfServiceAgreed());
-
-        $result = $this->account->setTermsOfServiceAgreed(true);
-        $this->assertSame($this->account, $result);
-        $this->assertTrue($this->account->isTermsOfServiceAgreed());
-
-        $this->account->setTermsOfServiceAgreed(false);
-        $this->assertFalse($this->account->isTermsOfServiceAgreed());
-    }
-
-    public function test_valid_getterSetter(): void
-    {
-        $this->assertFalse($this->account->isValid());
-
-        $result = $this->account->setValid(true);
-        $this->assertSame($this->account, $result);
-        $this->assertTrue($this->account->isValid());
-
-        $this->account->setValid(false);
-        $this->assertFalse($this->account->isValid());
-    }
-
-    public function test_orders_collection(): void
-    {
-        $orders = $this->account->getOrders();
+        $account = $this->createEntity();
+        $orders = $account->getOrders();
 
         $this->assertInstanceOf(ArrayCollection::class, $orders);
         $this->assertTrue($orders->isEmpty());
         $this->assertSame(0, $orders->count());
     }
 
-    public function test_addOrder(): void
-    {        $order = $this->createMock(Order::class);
+    public function testAddOrder(): void
+    {
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试实体间关联关系
+         * 2. 测试只需要验证集合操作，不涉及 Order 的具体行为
+         * 3. 使用 mock 避免创建复杂的实体对象依赖
+         */
+        $account = $this->createEntity();
+        $order = $this->createMock(Order::class);
 
-        $result = $this->account->addOrder($order);
-
-        $this->assertSame($this->account, $result);
-        $this->assertTrue($this->account->getOrders()->contains($order));
-        $this->assertSame(1, $this->account->getOrders()->count());
+        $account->addOrder($order);
+        $this->assertTrue($account->getOrders()->contains($order));
+        $this->assertSame(1, $account->getOrders()->count());
     }
 
-    public function test_addOrder_preventDuplicates(): void
-    {        $order = $this->createMock(Order::class);
+    public function testAddOrderPreventDuplicates(): void
+    {
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试重复添加的处理逻辑
+         * 2. 测试关注集合的去重功能，不需要 Order 的实际实现
+         * 3. Mock 对象足以验证集合的行为
+         */
+        $account = $this->createEntity();
+        $order = $this->createMock(Order::class);
 
         // 添加同一个订单两次
-        $this->account->addOrder($order);
-        $this->account->addOrder($order);
+        $account->addOrder($order);
+        $account->addOrder($order);
 
         // 应该只有一个
-        $this->assertSame(1, $this->account->getOrders()->count());
-        $this->assertTrue($this->account->getOrders()->contains($order));
+        $this->assertSame(1, $account->getOrders()->count());
+        $this->assertTrue($account->getOrders()->contains($order));
     }
 
-    public function test_removeOrder(): void
-    {        $order = $this->createMock(Order::class);
+    public function testRemoveOrder(): void
+    {
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试从集合中移除的功能
+         * 2. 测试只关注集合操作，不需要 Order 的具体实现
+         * 3. Mock 简化了测试设置，专注于被测试的行为
+         */
+        $account = $this->createEntity();
+        $order = $this->createMock(Order::class);
 
         // 先添加订单
-        $this->account->getOrders()->add($order);
-        $this->assertTrue($this->account->getOrders()->contains($order));
+        $account->getOrders()->add($order);
+        $this->assertTrue($account->getOrders()->contains($order));
 
         // 然后移除
-        $result = $this->account->removeOrder($order);
-
-        $this->assertSame($this->account, $result);
-        $this->assertFalse($this->account->getOrders()->contains($order));
-        $this->assertSame(0, $this->account->getOrders()->count());
+        $account->removeOrder($order);
+        $this->assertFalse($account->getOrders()->contains($order));
+        $this->assertSame(0, $account->getOrders()->count());
     }
 
-    public function test_removeOrder_notOwnedByAccount(): void
-    {        $order1 = $this->createMock(Order::class);        $order2 = $this->createMock(Order::class);
+    public function testRemoveOrderNotOwnedByAccount(): void
+    {
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试移除不存在的订单的场景
+         * 2. 需要两个不同的 mock 实例来区分不同的订单
+         * 3. 测试集合的边界情况，mock 足以满足需求
+         */
+        $account = $this->createEntity();
+        $order1 = $this->createMock(Order::class);
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试移除不存在的订单的场景
+         * 2. 需要两个不同的 mock 实例来区分不同的订单
+         * 3. 测试集合的边界情况，mock 足以满足需求
+         */
+        $order2 = $this->createMock(Order::class);
 
-        $this->account->getOrders()->add($order1);
-        $this->account->removeOrder($order2); // 移除不存在的订单
+        $account->getOrders()->add($order1);
+        $account->removeOrder($order2); // 移除不存在的订单
 
         // order1 应该仍然存在
-        $this->assertTrue($this->account->getOrders()->contains($order1));
-        $this->assertSame(1, $this->account->getOrders()->count());
+        $this->assertTrue($account->getOrders()->contains($order1));
+        $this->assertSame(1, $account->getOrders()->count());
     }
 
-    public function test_isDeactivated(): void
+    public function testIsDeactivated(): void
     {
-        $this->assertFalse($this->account->isDeactivated());
+        $account = $this->createEntity();
+        $this->assertFalse($account->isDeactivated());
 
-        $this->account->setStatus(AccountStatus::PENDING);
-        $this->assertFalse($this->account->isDeactivated());
+        $account->setStatus(AccountStatus::PENDING);
+        $this->assertFalse($account->isDeactivated());
 
-        $this->account->setStatus(AccountStatus::VALID);
-        $this->assertFalse($this->account->isDeactivated());
+        $account->setStatus(AccountStatus::VALID);
+        $this->assertFalse($account->isDeactivated());
 
-        $this->account->setStatus(AccountStatus::DEACTIVATED);
-        $this->assertTrue($this->account->isDeactivated());
+        $account->setStatus(AccountStatus::DEACTIVATED);
+        $this->assertTrue($account->isDeactivated());
     }
 
-    public function test_toString_withoutId(): void
+    public function testToStringWithoutId(): void
     {
-        $this->account->setAcmeServerUrl('https://acme-staging-v02.api.letsencrypt.org/directory');
+        $account = $this->createEntity();
+        $account->setAcmeServerUrl('https://acme-staging-v02.api.letsencrypt.org/directory');
 
         $expected = 'Account #0 (https://acme-staging-v02.api.letsencrypt.org/directory)';
-        $this->assertSame($expected, (string) $this->account);
+        $this->assertSame($expected, (string) $account);
     }
 
-    public function test_toString_withEmptyValues(): void
+    public function testToStringWithEmptyValues(): void
     {
-        $expected = 'Account #0 ()';
-        $this->assertSame($expected, (string) $this->account);
+        $account = $this->createEntity();
+        $account->setAcmeServerUrl('https://acme.example.com');
+
+        $expected = 'Account #0 (https://acme.example.com)';
+        $this->assertSame($expected, (string) $account);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->account);
+        $account = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $account);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        $account = $this->createEntity();
         $serverUrl = 'https://acme-v02.api.letsencrypt.org/directory';
         $accountUrl = 'https://acme-v02.api.letsencrypt.org/acme/acct/123456';
         $privateKey = '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----';
         $publicKeyJwk = '{"kty":"RSA","n":"test","e":"AQAB"}';
         $contacts = ['mailto:test@example.com'];
 
-        $result = $this->account
-            ->setAcmeServerUrl($serverUrl)
-            ->setAccountUrl($accountUrl)
-            ->setPrivateKey($privateKey)
-            ->setPublicKeyJwk($publicKeyJwk)
-            ->setStatus(AccountStatus::VALID)
-            ->setContacts($contacts)
-            ->setTermsOfServiceAgreed(true);
-
-        $this->assertSame($this->account, $result);
-        $this->assertSame($serverUrl, $this->account->getAcmeServerUrl());
-        $this->assertSame($accountUrl, $this->account->getAccountUrl());
-        $this->assertSame($privateKey, $this->account->getPrivateKey());
-        $this->assertSame($publicKeyJwk, $this->account->getPublicKeyJwk());
-        $this->assertSame(AccountStatus::VALID, $this->account->getStatus());
-        $this->assertSame($contacts, $this->account->getContacts());
-        $this->assertTrue($this->account->isTermsOfServiceAgreed());
-        $this->assertTrue($this->account->isValid());
+        $account->setAcmeServerUrl($serverUrl);
+        $account->setAccountUrl($accountUrl);
+        $account->setPrivateKey($privateKey);
+        $account->setPublicKeyJwk($publicKeyJwk);
+        $account->setStatus(AccountStatus::VALID);
+        $account->setContacts($contacts);
+        $account->setTermsOfServiceAgreed(true);
+        $this->assertSame($serverUrl, $account->getAcmeServerUrl());
+        $this->assertSame($accountUrl, $account->getAccountUrl());
+        $this->assertSame($privateKey, $account->getPrivateKey());
+        $this->assertSame($publicKeyJwk, $account->getPublicKeyJwk());
+        $this->assertSame(AccountStatus::VALID, $account->getStatus());
+        $this->assertSame($contacts, $account->getContacts());
+        $this->assertTrue($account->isTermsOfServiceAgreed());
+        $this->assertTrue($account->isValid());
     }
 
-    public function test_businessScenario_accountRegistration(): void
+    public function testBusinessScenarioAccountRegistration(): void
     {
         // 新注册的账户
-        $this->account
-            ->setAcmeServerUrl('https://acme-v02.api.letsencrypt.org/directory')
-            ->setPrivateKey('-----BEGIN PRIVATE KEY-----\ntest_key\n-----END PRIVATE KEY-----')
-            ->setPublicKeyJwk('{"kty":"RSA","n":"test","e":"AQAB"}')
-            ->setContacts(['mailto:admin@example.com'])
-            ->setTermsOfServiceAgreed(true)
-            ->setStatus(AccountStatus::PENDING);
+        $account = $this->createEntity();
+        $account->setAcmeServerUrl('https://acme-v02.api.letsencrypt.org/directory');
+        $account->setPrivateKey('-----BEGIN PRIVATE KEY-----\ntest_key\n-----END PRIVATE KEY-----');
+        $account->setPublicKeyJwk('{"kty":"RSA","n":"test","e":"AQAB"}');
+        $account->setContacts(['mailto:admin@example.com']);
+        $account->setTermsOfServiceAgreed(true);
+        $account->setStatus(AccountStatus::PENDING);
 
-        $this->assertSame(AccountStatus::PENDING, $this->account->getStatus());
-        $this->assertFalse($this->account->isValid());
-        $this->assertTrue($this->account->isTermsOfServiceAgreed());
-        $this->assertNotEmpty($this->account->getContacts());
+        $this->assertSame(AccountStatus::PENDING, $account->getStatus());
+        $this->assertFalse($account->isValid());
+        $this->assertTrue($account->isTermsOfServiceAgreed());
+        $this->assertNotEmpty($account->getContacts());
     }
 
-    public function test_businessScenario_accountActivation(): void
+    public function testBusinessScenarioAccountActivation(): void
     {
         // 账户激活流程
-        $this->account
-            ->setAcmeServerUrl('https://acme-v02.api.letsencrypt.org/directory')
-            ->setStatus(AccountStatus::PENDING);
+        $account = $this->createEntity();
+        $account->setAcmeServerUrl('https://acme-v02.api.letsencrypt.org/directory');
+        $account->setStatus(AccountStatus::PENDING);
 
-        $this->assertFalse($this->account->isValid());
+        $this->assertFalse($account->isValid());
 
         // 模拟 ACME 服务器验证后的状态更新
-        $this->account
-            ->setAccountUrl('https://acme-v02.api.letsencrypt.org/acme/acct/123456')
-            ->setStatus(AccountStatus::VALID);
+        $account->setAccountUrl('https://acme-v02.api.letsencrypt.org/acme/acct/123456');
+        $account->setStatus(AccountStatus::VALID);
 
-        $this->assertTrue($this->account->isValid());
-        $this->assertSame(AccountStatus::VALID, $this->account->getStatus());
-        $this->assertNotNull($this->account->getAccountUrl());
+        $this->assertTrue($account->isValid());
+        $this->assertSame(AccountStatus::VALID, $account->getStatus());
+        $this->assertNotNull($account->getAccountUrl());
     }
 
-    public function test_businessScenario_accountDeactivation(): void
+    public function testBusinessScenarioAccountDeactivation(): void
     {
         // 已激活的账户
-        $this->account
-            ->setStatus(AccountStatus::VALID)
-            ->setValid(true);
+        $account = $this->createEntity();
+        $account->setStatus(AccountStatus::VALID);
+        $account->setValid(true);
 
-        $this->assertTrue($this->account->isValid());
-        $this->assertFalse($this->account->isDeactivated());
+        $this->assertTrue($account->isValid());
+        $this->assertFalse($account->isDeactivated());
 
         // 停用账户
-        $this->account->setStatus(AccountStatus::DEACTIVATED);
+        $account->setStatus(AccountStatus::DEACTIVATED);
 
-        $this->assertFalse($this->account->isValid());
-        $this->assertTrue($this->account->isDeactivated());
-        $this->assertSame(AccountStatus::DEACTIVATED, $this->account->getStatus());
+        $this->assertFalse($account->isValid());
+        $this->assertTrue($account->isDeactivated());
+        $this->assertSame(AccountStatus::DEACTIVATED, $account->getStatus());
     }
 
-    public function test_businessScenario_multipleOrders(): void
-    {        $order1 = $this->createMock(Order::class);        $order2 = $this->createMock(Order::class);        $order3 = $this->createMock(Order::class);
-
-        $this->account
-            ->addOrder($order1)
-            ->addOrder($order2)
-            ->addOrder($order3);
-
-        $this->assertSame(3, $this->account->getOrders()->count());
-        $this->assertTrue($this->account->getOrders()->contains($order1));
-        $this->assertTrue($this->account->getOrders()->contains($order2));
-        $this->assertTrue($this->account->getOrders()->contains($order3));
-    }
-
-    public function test_edgeCases_emptyContacts(): void
+    public function testBusinessScenarioMultipleOrders(): void
     {
-        $this->account->setContacts([]);
-        $this->assertSame([], $this->account->getContacts());
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试账户管理多个订单的业务场景
+         * 2. 需要多个独立的 mock 实例来模拟真实的多订单场景
+         * 3. 测试重点是集合管理，不需要 Order 的具体业务逻辑
+         */
+        $account = $this->createEntity();
+        $order1 = $this->createMock(Order::class);
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试账户管理多个订单的业务场景
+         * 2. 需要多个独立的 mock 实例来模拟真实的多订单场景
+         * 3. 测试重点是集合管理，不需要 Order 的具体业务逻辑
+         */
+        $order2 = $this->createMock(Order::class);
+        /*
+         * 使用具体类 Order 进行 mock：
+         * 1. Order 是实体类，用于测试账户管理多个订单的业务场景
+         * 2. 需要多个独立的 mock 实例来模拟真实的多订单场景
+         * 3. 测试重点是集合管理，不需要 Order 的具体业务逻辑
+         */
+        $order3 = $this->createMock(Order::class);
+
+        $account->addOrder($order1);
+        $account->addOrder($order2);
+        $account->addOrder($order3);
+
+        $this->assertSame(3, $account->getOrders()->count());
+        $this->assertTrue($account->getOrders()->contains($order1));
+        $this->assertTrue($account->getOrders()->contains($order2));
+        $this->assertTrue($account->getOrders()->contains($order3));
     }
 
-    public function test_edgeCases_longUrls(): void
+    public function testEdgeCasesEmptyContacts(): void
     {
+        $account = $this->createEntity();
+        $account->setContacts([]);
+        $this->assertSame([], $account->getContacts());
+    }
+
+    public function testEdgeCasesLongUrls(): void
+    {
+        $account = $this->createEntity();
         $longUrl = 'https://acme-v02.api.letsencrypt.org/directory/' . str_repeat('a', 400);
-        $this->account->setAcmeServerUrl($longUrl);
+        $account->setAcmeServerUrl($longUrl);
 
-        $this->assertSame($longUrl, $this->account->getAcmeServerUrl());
+        $this->assertSame($longUrl, $account->getAcmeServerUrl());
     }
 
-    public function test_edgeCases_specialCharactersInKey(): void
+    public function testEdgeCasesSpecialCharactersInKey(): void
     {
+        $account = $this->createEntity();
         $keyWithSpecialChars = "-----BEGIN PRIVATE KEY-----\n特殊字符\n中文\n-----END PRIVATE KEY-----";
-        $this->account->setPrivateKey($keyWithSpecialChars);
+        $account->setPrivateKey($keyWithSpecialChars);
 
-        $this->assertSame($keyWithSpecialChars, $this->account->getPrivateKey());
+        $this->assertSame($keyWithSpecialChars, $account->getPrivateKey());
+    }
+
+    protected function createEntity(): Account
+    {
+        return new Account();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'acmeServerUrl' => ['acmeServerUrl', 'https://acme.example.com'];
+        yield 'accountUrl' => ['accountUrl', 'https://acme.example.com/acct/123'];
+        yield 'privateKey' => ['privateKey', '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----'];
+        yield 'publicKeyJwk' => ['publicKeyJwk', '{"kty":"RSA","n":"test","e":"AQAB"}'];
+        yield 'status' => ['status', AccountStatus::VALID];
+        yield 'contacts' => ['contacts', ['mailto:test@example.com']];
+        yield 'termsOfServiceAgreed' => ['termsOfServiceAgreed', true];
+        yield 'valid' => ['valid', true];
     }
 }

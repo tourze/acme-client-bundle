@@ -4,24 +4,28 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Exception;
 
-use PHPUnit\Framework\TestCase;
-use Tourze\ACMEClientBundle\Exception\AcmeClientException;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
 use Tourze\ACMEClientBundle\Exception\AcmeRateLimitException;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
 /**
  * ACME 速率限制异常测试
+ *
+ * @internal
  */
-class AcmeRateLimitExceptionTest extends TestCase
+#[CoversClass(AcmeRateLimitException::class)]
+final class AcmeRateLimitExceptionTest extends AbstractExceptionTestCase
 {
-    public function test_exception_extends_acme_client_exception(): void
+    public function testExceptionExtendsAbstractAcmeException(): void
     {
         $exception = new AcmeRateLimitException();
 
-        $this->assertInstanceOf(AcmeClientException::class, $exception);
+        $this->assertInstanceOf(AbstractAcmeException::class, $exception);
         $this->assertInstanceOf(\Exception::class, $exception);
     }
 
-    public function test_exception_with_default_parameters(): void
+    public function testExceptionWithDefaultParameters(): void
     {
         $exception = new AcmeRateLimitException();
 
@@ -33,7 +37,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertNull($exception->getRetryAfter());
     }
 
-    public function test_exception_with_custom_message_and_code(): void
+    public function testExceptionWithCustomMessageAndCode(): void
     {
         $message = 'Too many requests';
         $code = 429;
@@ -44,7 +48,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertSame($code, $exception->getCode());
     }
 
-    public function test_exception_with_previous_exception(): void
+    public function testExceptionWithPreviousException(): void
     {
         $previous = new \RuntimeException('HTTP error');
         $exception = new AcmeRateLimitException('Rate limit', 429, $previous);
@@ -52,7 +56,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertSame($previous, $exception->getPrevious());
     }
 
-    public function test_exception_with_acme_error_type(): void
+    public function testExceptionWithAcmeErrorType(): void
     {
         $errorType = 'rateLimited';
         $exception = new AcmeRateLimitException('Rate limit', 429, null, $errorType);
@@ -60,12 +64,12 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertSame($errorType, $exception->getAcmeErrorType());
     }
 
-    public function test_exception_with_acme_error_details(): void
+    public function testExceptionWithAcmeErrorDetails(): void
     {
         $errorDetails = [
             'type' => 'urn:ietf:params:acme:error:rateLimited',
             'detail' => 'Too many requests for this identifier',
-            'status' => 429
+            'status' => 429,
         ];
 
         $exception = new AcmeRateLimitException('Rate limit', 429, null, 'rateLimited', $errorDetails);
@@ -73,7 +77,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertSame($errorDetails, $exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_with_retry_after_datetime(): void
+    public function testExceptionWithRetryAfterDatetime(): void
     {
         $retryAfter = new \DateTimeImmutable('+1 hour');
         $exception = new AcmeRateLimitException('Rate limit', 429, null, 'rateLimited', null, $retryAfter);
@@ -82,7 +86,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertInstanceOf(\DateTimeImmutable::class, $exception->getRetryAfter());
     }
 
-    public function test_exception_with_retry_after_datetime_mutable(): void
+    public function testExceptionWithRetryAfterDatetimeMutable(): void
     {
         $retryAfter = new \DateTimeImmutable('+30 minutes');
         $exception = new AcmeRateLimitException('Rate limit', 429, null, 'rateLimited', null, $retryAfter);
@@ -91,7 +95,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertInstanceOf(\DateTimeImmutable::class, $exception->getRetryAfter());
     }
 
-    public function test_exception_with_all_parameters(): void
+    public function testExceptionWithAllParameters(): void
     {
         $message = 'Rate limit exceeded for domain validation';
         $code = 429;
@@ -100,7 +104,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $acmeErrorDetails = [
             'type' => 'urn:ietf:params:acme:error:rateLimited',
             'detail' => 'Too many failed validation attempts',
-            'status' => 429
+            'status' => 429,
         ];
         $retryAfter = new \DateTimeImmutable('+2 hours');
 
@@ -121,7 +125,7 @@ class AcmeRateLimitExceptionTest extends TestCase
         $this->assertSame($retryAfter, $exception->getRetryAfter());
     }
 
-    public function test_exception_can_be_thrown_and_caught(): void
+    public function testExceptionCanBeThrownAndCaught(): void
     {
         $this->expectException(AcmeRateLimitException::class);
         $this->expectExceptionMessage('Test rate limit');
@@ -130,11 +134,11 @@ class AcmeRateLimitExceptionTest extends TestCase
         throw new AcmeRateLimitException('Test rate limit', 429);
     }
 
-    public function test_exception_can_be_caught_as_acme_client_exception(): void
+    public function testExceptionCanBeCaughtAsAbstractAcmeException(): void
     {
         try {
             throw new AcmeRateLimitException('Rate limit test');
-        } catch (AcmeClientException $e) {
+        } catch (AbstractAcmeException $e) {
             $this->assertInstanceOf(AcmeRateLimitException::class, $e);
             $this->assertSame('Rate limit test', $e->getMessage());
         }
@@ -143,7 +147,7 @@ class AcmeRateLimitExceptionTest extends TestCase
     /**
      * 测试速率限制异常的业务逻辑场景
      */
-    public function test_retry_logic_scenario(): void
+    public function testRetryLogicScenario(): void
     {
         $retryAfter = new \DateTimeImmutable('+1 hour');
         $exception = new AcmeRateLimitException(
@@ -157,20 +161,21 @@ class AcmeRateLimitExceptionTest extends TestCase
 
         // 验证可以从异常中获取重试时间
         $this->assertNotNull($exception->getRetryAfter());
-        $this->assertTrue($exception->getRetryAfter() > new \DateTimeImmutable());
+        $this->assertGreaterThan(new \DateTimeImmutable(), $exception->getRetryAfter());
 
         // 验证错误详情中包含重试信息
         $details = $exception->getAcmeErrorDetails();
+        $this->assertIsArray($details);
         $this->assertArrayHasKey('retry_after', $details);
         $this->assertSame(3600, $details['retry_after']);
     }
 
-    public function test_inheritance_hierarchy(): void
+    public function testInheritanceHierarchy(): void
     {
         $exception = new AcmeRateLimitException();
 
         $this->assertInstanceOf(AcmeRateLimitException::class, $exception);
-        $this->assertInstanceOf(AcmeClientException::class, $exception);
+        $this->assertInstanceOf(AbstractAcmeException::class, $exception);
         $this->assertInstanceOf(\Exception::class, $exception);
         $this->assertInstanceOf(\Throwable::class, $exception);
     }

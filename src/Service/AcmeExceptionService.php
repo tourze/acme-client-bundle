@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Tourze\ACMEClientBundle\Entity\AcmeExceptionLog;
 use Tourze\ACMEClientBundle\Repository\AcmeExceptionLogRepository;
 
@@ -13,21 +14,25 @@ use Tourze\ACMEClientBundle\Repository\AcmeExceptionLogRepository;
  *
  * 负责记录和管理所有 ACME 操作过程中的异常
  */
-class AcmeExceptionService
+#[Autoconfigure(public: true)]
+readonly class AcmeExceptionService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly AcmeExceptionLogRepository $exceptionLogRepository,
-    ) {}
+        private EntityManagerInterface $entityManager,
+        private AcmeExceptionLogRepository $exceptionLogRepository,
+    ) {
+    }
 
     /**
      * 记录异常日志
+     *
+     * @param array<string, mixed>|null $context
      */
     public function logException(
         \Throwable $exception,
         ?string $entityType = null,
         ?int $entityId = null,
-        ?array $context = null
+        ?array $context = null,
     ): AcmeExceptionLog {
         $log = AcmeExceptionLog::fromException($exception, $entityType, $entityId, $context);
 
@@ -39,44 +44,68 @@ class AcmeExceptionService
 
     /**
      * 查询异常日志
+     *
+     * @return AcmeExceptionLog[]
      */
     public function findExceptions(
         ?string $exceptionClass = null,
         ?string $entityType = null,
         ?int $entityId = null,
         ?\DateTimeImmutable $since = null,
-        int $limit = 100
+        int $limit = 100,
     ): array {
         $qb = $this->exceptionLogRepository
             ->createQueryBuilder('e')
-            ->orderBy('e.occurredAt', 'DESC')
-            ->setMaxResults($limit);
+            ->orderBy('e.occurredTime', 'DESC')
+            ->setMaxResults($limit)
+        ;
 
-        if ($exceptionClass !== null) {
+        if (null !== $exceptionClass) {
             $qb->andWhere('e.exceptionClass = :exceptionClass')
-                ->setParameter('exceptionClass', $exceptionClass);
+                ->setParameter('exceptionClass', $exceptionClass)
+            ;
         }
 
-        if ($entityType !== null) {
+        if (null !== $entityType) {
             $qb->andWhere('e.entityType = :entityType')
-                ->setParameter('entityType', $entityType);
+                ->setParameter('entityType', $entityType)
+            ;
         }
 
-        if ($entityId !== null) {
+        if (null !== $entityId) {
             $qb->andWhere('e.entityId = :entityId')
-                ->setParameter('entityId', $entityId);
+                ->setParameter('entityId', $entityId)
+            ;
         }
 
-        if ($since !== null) {
-            $qb->andWhere('e.occurredAt >= :since')
-                ->setParameter('since', $since);
+        if (null !== $since) {
+            $qb->andWhere('e.occurredTime >= :since')
+                ->setParameter('since', $since)
+            ;
         }
 
+        /** @var array<AcmeExceptionLog> */
         return $qb->getQuery()->getResult();
     }
 
     /**
+     * 查询异常日志（别名方法，向后兼容）
+     *
+     * @return AcmeExceptionLog[]
+     */
+    public function findExceptionLogs(
+        ?string $exceptionClass = null,
+        ?string $entityType = null,
+        ?int $entityId = null,
+        int $limit = 100,
+    ): array {
+        return $this->findExceptions($exceptionClass, $entityType, $entityId, null, $limit);
+    }
+
+    /**
      * 获取异常统计信息
+     *
+     * @return array<int, array{exceptionClass: string, count: int}>
      */
     public function getExceptionStats(?\DateTimeImmutable $since = null): array
     {
@@ -84,13 +113,16 @@ class AcmeExceptionService
             ->createQueryBuilder('e')
             ->select('e.exceptionClass, COUNT(e.id) as count')
             ->groupBy('e.exceptionClass')
-            ->orderBy('count', 'DESC');
+            ->orderBy('count', 'DESC')
+        ;
 
-        if ($since !== null) {
-            $qb->andWhere('e.occurredAt >= :since')
-                ->setParameter('since', $since);
+        if (null !== $since) {
+            $qb->andWhere('e.occurredTime >= :since')
+                ->setParameter('since', $since)
+            ;
         }
 
+        /** @var array<int, array{exceptionClass: string, count: int}> */
         return $qb->getQuery()->getResult();
     }
 
@@ -101,13 +133,16 @@ class AcmeExceptionService
     {
         $cutoffDate = new \DateTimeImmutable("-{$daysToKeep} days");
 
-        $qb = $this->entityManager->createQueryBuilder();
-        $query = $qb->delete(AcmeExceptionLog::class, 'e')
-            ->where('e.occurredAt < :cutoffDate')
+        $qb = $this->exceptionLogRepository->createQueryBuilder('e');
+        $query = $qb->delete()
+            ->where('e.occurredTime < :cutoffDate')
             ->setParameter('cutoffDate', $cutoffDate)
-            ->getQuery();
+            ->getQuery()
+        ;
 
-        return $query->execute();
+        $result = $query->execute();
+
+        return is_int($result) ? $result : 0;
     }
 
     /**
@@ -118,7 +153,7 @@ class AcmeExceptionService
         string $message,
         ?string $entityType = null,
         ?int $entityId = null,
-        int $minutesWindow = 5
+        int $minutesWindow = 5,
     ): bool {
         $since = new \DateTimeImmutable("-{$minutesWindow} minutes");
 
@@ -126,38 +161,45 @@ class AcmeExceptionService
             ->createQueryBuilder('e')
             ->where('e.exceptionClass = :exceptionClass')
             ->andWhere('e.message = :message')
-            ->andWhere('e.occurredAt >= :since')
+            ->andWhere('e.occurredTime >= :since')
             ->setParameter('exceptionClass', $exceptionClass)
             ->setParameter('message', $message)
-            ->setParameter('since', $since);
+            ->setParameter('since', $since)
+        ;
 
-        if ($entityType !== null) {
+        if (null !== $entityType) {
             $qb->andWhere('e.entityType = :entityType')
-                ->setParameter('entityType', $entityType);
+                ->setParameter('entityType', $entityType)
+            ;
         }
 
-        if ($entityId !== null) {
+        if (null !== $entityId) {
             $qb->andWhere('e.entityId = :entityId')
-                ->setParameter('entityId', $entityId);
+                ->setParameter('entityId', $entityId)
+            ;
         }
 
-        return $qb->getQuery()->getOneOrNullResult() !== null;
+        return null !== $qb->getQuery()->getOneOrNullResult();
     }
 
     /**
      * 获取最近的异常日志
+     *
+     * @return AcmeExceptionLog[]
      */
     public function getRecentExceptions(int $hours = 24, int $limit = 50): array
     {
         $since = new \DateTimeImmutable("-{$hours} hours");
 
+        /** @var array<AcmeExceptionLog> */
         return $this->exceptionLogRepository
             ->createQueryBuilder('e')
-            ->where('e.occurredAt >= :since')
-            ->orderBy('e.occurredAt', 'DESC')
+            ->where('e.occurredTime >= :since')
+            ->orderBy('e.occurredTime', 'DESC')
             ->setMaxResults($limit)
             ->setParameter('since', $since)
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 }

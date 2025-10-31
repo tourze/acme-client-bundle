@@ -7,15 +7,18 @@ namespace Tourze\ACMEClientBundle\Exception;
 /**
  * ACME 速率限制异常
  */
-class AcmeRateLimitException extends AcmeClientException
+class AcmeRateLimitException extends AbstractAcmeException
 {
+    /**
+     * @param array<string, mixed>|null $acmeErrorDetails
+     */
     public function __construct(
         string $message = 'Rate limit exceeded',
         int $code = 429,
         ?\Throwable $previous = null,
         ?string $acmeErrorType = 'rateLimited',
         ?array $acmeErrorDetails = null,
-        private readonly ?\DateTimeInterface $retryAfter = null
+        private readonly ?\DateTimeInterface $retryAfter = null,
     ) {
         parent::__construct($message, $code, $previous, $acmeErrorType, $acmeErrorDetails);
     }

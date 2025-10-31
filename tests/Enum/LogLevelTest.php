@@ -4,93 +4,40 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
+use Tourze\EnumExtra\Itemable;
+use Tourze\EnumExtra\Labelable;
+use Tourze\EnumExtra\Selectable;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
 /**
  * 日志级别枚举测试
+ *
+ * @internal
  */
-class LogLevelTest extends TestCase
+#[CoversClass(LogLevel::class)]
+final class LogLevelTest extends AbstractEnumTestCase
 {
-    public function test_enum_has_all_expected_cases(): void
+    public function testEnumHasAllExpectedCases(): void
     {
         $expectedCases = ['info', 'warning', 'error', 'debug'];
-        $actualCases = array_map(fn(LogLevel $case) => $case->value, LogLevel::cases());
+        $actualCases = array_map(fn (LogLevel $case) => $case->value, LogLevel::cases());
 
         $this->assertSame($expectedCases, $actualCases);
         $this->assertCount(4, LogLevel::cases());
     }
 
-    public function test_info_case_properties(): void
-    {
-        $level = LogLevel::INFO;
-
-        $this->assertSame('info', $level->value);
-        $this->assertSame('信息', $level->getLabel());
-    }
-
-    public function test_warning_case_properties(): void
-    {
-        $level = LogLevel::WARNING;
-
-        $this->assertSame('warning', $level->value);
-        $this->assertSame('警告', $level->getLabel());
-    }
-
-    public function test_error_case_properties(): void
-    {
-        $level = LogLevel::ERROR;
-
-        $this->assertSame('error', $level->value);
-        $this->assertSame('错误', $level->getLabel());
-    }
-
-    public function test_debug_case_properties(): void
-    {
-        $level = LogLevel::DEBUG;
-
-        $this->assertSame('debug', $level->value);
-        $this->assertSame('调试', $level->getLabel());
-    }
-
-    public function test_enum_from_string_value(): void
-    {
-        $this->assertSame(LogLevel::INFO, LogLevel::from('info'));
-        $this->assertSame(LogLevel::WARNING, LogLevel::from('warning'));
-        $this->assertSame(LogLevel::ERROR, LogLevel::from('error'));
-        $this->assertSame(LogLevel::DEBUG, LogLevel::from('debug'));
-    }
-
-    public function test_enum_from_invalid_string_throws_exception(): void
-    {
-        $this->expectException(\ValueError::class);
-        LogLevel::from('critical');
-    }
-
-    public function test_try_from_with_valid_values(): void
-    {
-        $this->assertSame(LogLevel::INFO, LogLevel::tryFrom('info'));
-        $this->assertSame(LogLevel::WARNING, LogLevel::tryFrom('warning'));
-        $this->assertSame(LogLevel::ERROR, LogLevel::tryFrom('error'));
-        $this->assertSame(LogLevel::DEBUG, LogLevel::tryFrom('debug'));
-    }
-
-    public function test_try_from_with_invalid_value_returns_null(): void
-    {
-        $this->assertNull(LogLevel::tryFrom('critical'));
-        $this->assertNull(LogLevel::tryFrom('notice'));
-    }
-
-    public function test_enum_implements_required_interfaces(): void
+    public function testEnumImplementsRequiredInterfaces(): void
     {
         $reflection = new \ReflectionEnum(LogLevel::class);
 
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Labelable::class));
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Itemable::class));
-        $this->assertTrue($reflection->implementsInterface(\Tourze\EnumExtra\Selectable::class));
+        $this->assertTrue($reflection->implementsInterface(Labelable::class));
+        $this->assertTrue($reflection->implementsInterface(Itemable::class));
+        $this->assertTrue($reflection->implementsInterface(Selectable::class));
     }
 
-    public function test_enum_can_be_used_in_array_mapping(): void
+    public function testEnumCanBeUsedInArrayMapping(): void
     {
         $levelLabels = [];
         foreach (LogLevel::cases() as $level) {
@@ -107,7 +54,7 @@ class LogLevelTest extends TestCase
         $this->assertSame($expected, $levelLabels);
     }
 
-    public function test_enum_string_representation(): void
+    public function testEnumStringRepresentation(): void
     {
         $this->assertSame('info', (string) LogLevel::INFO->value);
         $this->assertSame('warning', (string) LogLevel::WARNING->value);
@@ -118,7 +65,7 @@ class LogLevelTest extends TestCase
     /**
      * 测试日志级别的优先级（虽然枚举本身不包含优先级逻辑，但可以测试顺序）
      */
-    public function test_log_level_order(): void
+    public function testLogLevelOrder(): void
     {
         $cases = LogLevel::cases();
 
@@ -127,5 +74,44 @@ class LogLevelTest extends TestCase
         $this->assertSame(LogLevel::WARNING, $cases[1]);
         $this->assertSame(LogLevel::ERROR, $cases[2]);
         $this->assertSame(LogLevel::DEBUG, $cases[3]);
+    }
+
+    /**
+     * 测试 toSelectItems 方法
+     */
+    public function testToSelectItems(): void
+    {
+        $selectItems = LogLevel::toSelectItems();
+
+        $this->assertCount(4, $selectItems);
+
+        foreach ($selectItems as $item) {
+            $this->assertArrayHasKey('value', $item);
+            $this->assertArrayHasKey('label', $item);
+        }
+
+        // 验证具体内容
+        $this->assertContains(['value' => 'info', 'label' => '信息'], $selectItems);
+        $this->assertContains(['value' => 'warning', 'label' => '警告'], $selectItems);
+        $this->assertContains(['value' => 'error', 'label' => '错误'], $selectItems);
+        $this->assertContains(['value' => 'debug', 'label' => '调试'], $selectItems);
+    }
+
+    /**
+     * 测试 toArray 方法
+     */
+    public function testToArray(): void
+    {
+        $array = LogLevel::INFO->toArray();
+        $this->assertSame(['value' => 'info', 'label' => '信息'], $array);
+
+        $array = LogLevel::WARNING->toArray();
+        $this->assertSame(['value' => 'warning', 'label' => '警告'], $array);
+
+        $array = LogLevel::ERROR->toArray();
+        $this->assertSame(['value' => 'error', 'label' => '错误'], $array);
+
+        $array = LogLevel::DEBUG->toArray();
+        $this->assertSame(['value' => 'debug', 'label' => '调试'], $array);
     }
 }

@@ -5,454 +5,428 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Authorization;
 use Tourze\ACMEClientBundle\Entity\Challenge;
 use Tourze\ACMEClientBundle\Entity\Identifier;
 use Tourze\ACMEClientBundle\Entity\Order;
 use Tourze\ACMEClientBundle\Enum\AuthorizationStatus;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Authorization 实体测试类
+ *
+ * @internal
  */
-class AuthorizationTest extends TestCase
+#[CoversClass(Authorization::class)]
+final class AuthorizationTest extends AbstractEntityTestCase
 {
-    private Authorization $authorization;
-
-    protected function setUp(): void
+    public function testConstructorDefaultValues(): void
     {
-        $this->authorization = new Authorization();
+        $authorization = $this->createEntity();
+        $this->assertNull($authorization->getId());
+        $this->assertNull($authorization->getOrder());
+        $this->assertNull($authorization->getIdentifier());
+        $this->assertSame(AuthorizationStatus::PENDING, $authorization->getStatus());
+        $this->assertNull($authorization->getExpiresTime());
+        $this->assertFalse($authorization->isWildcard());
+        $this->assertFalse($authorization->isValid());
+        $this->assertInstanceOf(ArrayCollection::class, $authorization->getChallenges());
+        $this->assertTrue($authorization->getChallenges()->isEmpty());
     }
 
-    public function test_constructor_defaultValues(): void
+    public function testStatusAutomaticValidFlag(): void
     {
-        $this->assertNull($this->authorization->getId());
-        $this->assertNull($this->authorization->getOrder());
-        $this->assertNull($this->authorization->getIdentifier());
-        $this->assertSame(AuthorizationStatus::PENDING, $this->authorization->getStatus());
-        $this->assertNull($this->authorization->getExpiresTime());
-        $this->assertFalse($this->authorization->isWildcard());
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertInstanceOf(ArrayCollection::class, $this->authorization->getChallenges());
-        $this->assertTrue($this->authorization->getChallenges()->isEmpty());
-    }
+        $authorization = $this->createEntity();
 
-    public function test_order_getterSetter(): void
-    {
-        $order = $this->createMock(Order::class);
-        $result = $this->authorization->setOrder($order);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame($order, $this->authorization->getOrder());
-    }
-
-    public function test_order_setToNull(): void
-    {
-        $order = $this->createMock(Order::class);
-        $this->authorization->setOrder($order);
-
-        $this->authorization->setOrder(null);
-        $this->assertNull($this->authorization->getOrder());
-    }
-
-    public function test_identifier_getterSetter(): void
-    {
-        $identifier = $this->createMock(Identifier::class);
-        $result = $this->authorization->setIdentifier($identifier);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame($identifier, $this->authorization->getIdentifier());
-    }
-
-    public function test_identifier_setToNull(): void
-    {
-        $identifier = $this->createMock(Identifier::class);
-        $this->authorization->setIdentifier($identifier);
-
-        $this->authorization->setIdentifier(null);
-        $this->assertNull($this->authorization->getIdentifier());
-    }
-
-    public function test_authorizationUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456';
-        $result = $this->authorization->setAuthorizationUrl($url);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame($url, $this->authorization->getAuthorizationUrl());
-    }
-
-    public function test_status_getterSetter(): void
-    {
-        $this->assertSame(AuthorizationStatus::PENDING, $this->authorization->getStatus());
-
-        $result = $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame(AuthorizationStatus::VALID, $this->authorization->getStatus());
-    }
-
-    public function test_status_automaticValidFlag(): void
-    {
         // 设置为 VALID 时自动设置 valid 标志为 true
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertTrue($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertTrue($authorization->isValid());
 
         // 设置为其他状态时 valid 标志为 false
-        $this->authorization->setStatus(AuthorizationStatus::PENDING);
-        $this->assertFalse($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $this->assertFalse($authorization->isValid());
 
-        $this->authorization->setStatus(AuthorizationStatus::INVALID);
-        $this->assertFalse($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::INVALID);
+        $this->assertFalse($authorization->isValid());
 
-        $this->authorization->setStatus(AuthorizationStatus::EXPIRED);
-        $this->assertFalse($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::EXPIRED);
+        $this->assertFalse($authorization->isValid());
 
-        $this->authorization->setStatus(AuthorizationStatus::REVOKED);
-        $this->assertFalse($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::REVOKED);
+        $this->assertFalse($authorization->isValid());
     }
 
-    public function test_expiresTime_getterSetter(): void
+    public function testAddChallenge(): void
     {
-        $this->assertNull($this->authorization->getExpiresTime());
-
-        $expiry = new \DateTimeImmutable('+30 days');
-        $result = $this->authorization->setExpiresTime($expiry);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame($expiry, $this->authorization->getExpiresTime());
-    }
-
-    public function test_expiresTime_setToNull(): void
-    {
-        $this->authorization->setExpiresTime(new \DateTimeImmutable());
-        $this->authorization->setExpiresTime(null);
-
-        $this->assertNull($this->authorization->getExpiresTime());
-    }
-
-    public function test_wildcard_getterSetter(): void
-    {
-        $this->assertFalse($this->authorization->isWildcard());
-
-        $result = $this->authorization->setWildcard(true);
-        $this->assertSame($this->authorization, $result);
-        $this->assertTrue($this->authorization->isWildcard());
-
-        $this->authorization->setWildcard(false);
-        $this->assertFalse($this->authorization->isWildcard());
-    }
-
-    public function test_valid_getterSetter(): void
-    {
-        $this->assertFalse($this->authorization->isValid());
-
-        $result = $this->authorization->setValid(true);
-        $this->assertSame($this->authorization, $result);
-        $this->assertTrue($this->authorization->isValid());
-
-        $this->authorization->setValid(false);
-        $this->assertFalse($this->authorization->isValid());
-    }
-
-    public function test_addChallenge(): void
-    {
+        /*
+         * 使用具体类 Challenge 进行 mock：
+         * 1. Challenge 是领域实体，没有接口定义，只能使用具体类
+         * 2. 在单元测试中模拟关联关系是合理的做法
+         * 3. 真实的实体创建需要复杂的构造逻辑，mock 更简洁
+         */
+        $authorization = $this->createEntity();
         $challenge = $this->createMock(Challenge::class);
 
-        $result = $this->authorization->addChallenge($challenge);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge));
-        $this->assertSame(1, $this->authorization->getChallenges()->count());
+        $authorization->addChallenge($challenge);
+        $this->assertTrue($authorization->getChallenges()->contains($challenge));
+        $this->assertSame(1, $authorization->getChallenges()->count());
     }
 
-    public function test_addChallenge_preventDuplicates(): void
+    public function testAddChallengePreventDuplicates(): void
     {
+        /* 使用具体类 Challenge 进行 mock，原因是：1. Challenge 是领域实体，没有接口定义，只能使用具体类；2. 测试重复添加的处理逻辑，只需要验证集合的去重功能；3. Mock 对象足以验证集合的行为，无需真实实体。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $challenge = $this->createMock(Challenge::class);
 
-        $this->authorization->addChallenge($challenge);
-        $this->authorization->addChallenge($challenge);
+        $authorization->addChallenge($challenge);
+        $authorization->addChallenge($challenge);
 
-        $this->assertSame(1, $this->authorization->getChallenges()->count());
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge));
+        $this->assertSame(1, $authorization->getChallenges()->count());
+        $this->assertTrue($authorization->getChallenges()->contains($challenge));
     }
 
-    public function test_removeChallenge(): void
+    public function testRemoveChallenge(): void
     {
+        /* 使用具体类 Challenge 进行 mock，原因是：1. Challenge 是领域实体，没有接口定义，只能使用具体类；2. 测试从集合中移除的功能，只关注集合操作；3. Mock 简化了测试设置，专注于被测试的行为。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $challenge = $this->createMock(Challenge::class);
 
-        $this->authorization->getChallenges()->add($challenge);
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge));
+        $authorization->getChallenges()->add($challenge);
+        $this->assertTrue($authorization->getChallenges()->contains($challenge));
 
-        $result = $this->authorization->removeChallenge($challenge);
-
-        $this->assertSame($this->authorization, $result);
-        $this->assertFalse($this->authorization->getChallenges()->contains($challenge));
-        $this->assertSame(0, $this->authorization->getChallenges()->count());
+        $authorization->removeChallenge($challenge);
+        $this->assertFalse($authorization->getChallenges()->contains($challenge));
+        $this->assertSame(0, $authorization->getChallenges()->count());
     }
 
-    public function test_isPending(): void
+    public function testIsPending(): void
     {
-        $this->assertTrue($this->authorization->isPending());
+        $authorization = $this->createEntity();
+        $this->assertTrue($authorization->isPending());
 
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isPending());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isPending());
 
-        $this->authorization->setStatus(AuthorizationStatus::PENDING);
-        $this->assertTrue($this->authorization->isPending());
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $this->assertTrue($authorization->isPending());
     }
 
-    public function test_isExpired_withStatus(): void
+    public function testIsExpiredWithStatus(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::EXPIRED);
-        $this->assertTrue($this->authorization->isExpired());
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::EXPIRED);
+        $this->assertTrue($authorization->isExpired());
 
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isExpired());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isExpired());
     }
 
-    public function test_isExpired_withTime(): void
+    public function testIsExpiredWithTime(): void
     {
+        $authorization = $this->createEntity();
+
         // 未过期的时间
         $future = new \DateTimeImmutable('+1 hour');
-        $this->authorization->setExpiresTime($future);
-        $this->assertFalse($this->authorization->isExpired());
+        $authorization->setExpiresTime($future);
+        $this->assertFalse($authorization->isExpired());
 
         // 已过期的时间
         $past = new \DateTimeImmutable('-1 hour');
-        $this->authorization->setExpiresTime($past);
-        $this->assertTrue($this->authorization->isExpired());
+        $authorization->setExpiresTime($past);
+        $this->assertTrue($authorization->isExpired());
     }
 
-    public function test_isExpired_statusOverridesTime(): void
+    public function testIsExpiredStatusOverridesTime(): void
     {
+        $authorization = $this->createEntity();
+
         // 即使时间未过期，但状态为 EXPIRED，仍然返回 true
         $future = new \DateTimeImmutable('+1 hour');
-        $this->authorization
-            ->setExpiresTime($future)
-            ->setStatus(AuthorizationStatus::EXPIRED);
+        $authorization->setExpiresTime($future);
+        $authorization->setStatus(AuthorizationStatus::EXPIRED);
 
-        $this->assertTrue($this->authorization->isExpired());
+        $this->assertTrue($authorization->isExpired());
     }
 
-    public function test_isRevoked(): void
+    public function testIsRevoked(): void
     {
-        $this->assertFalse($this->authorization->isRevoked());
+        $authorization = $this->createEntity();
+        $this->assertFalse($authorization->isRevoked());
 
-        $this->authorization->setStatus(AuthorizationStatus::REVOKED);
-        $this->assertTrue($this->authorization->isRevoked());
+        $authorization->setStatus(AuthorizationStatus::REVOKED);
+        $this->assertTrue($authorization->isRevoked());
 
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isRevoked());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isRevoked());
     }
 
-    public function test_isInvalid(): void
+    public function testIsInvalid(): void
     {
-        $this->assertFalse($this->authorization->isInvalid());
+        $authorization = $this->createEntity();
+        $this->assertFalse($authorization->isInvalid());
 
-        $this->authorization->setStatus(AuthorizationStatus::INVALID);
-        $this->assertTrue($this->authorization->isInvalid());
+        $authorization->setStatus(AuthorizationStatus::INVALID);
+        $this->assertTrue($authorization->isInvalid());
 
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isInvalid());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isInvalid());
     }
 
-    public function test_toString_withIdentifier(): void
+    public function testToStringWithIdentifier(): void
     {
+        /* 使用具体类 Identifier 进行 mock，原因是：1. Identifier 是领域实体，没有接口定义，只能使用具体类；2. 测试 toString 方法时只需要验证是否存在关联；3. Mock 对象足以满足测试需求，无需真实实体。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $identifier = $this->createMock(Identifier::class);
-        $this->authorization->setIdentifier($identifier);
+        $authorization->setIdentifier($identifier);
 
         $expected = 'Authorization #0 ()';
-        $this->assertSame($expected, (string)$this->authorization);
+        $this->assertSame($expected, (string) $authorization);
     }
 
-    public function test_toString_withoutIdentifier(): void
+    public function testToStringWithoutIdentifier(): void
     {
+        $authorization = $this->createEntity();
         $expected = 'Authorization #0 ()';
-        $this->assertSame($expected, (string)$this->authorization);
+        $this->assertSame($expected, (string) $authorization);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->authorization);
+        $authorization = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $authorization);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        /* 使用具体类 Order 进行 mock，原因是：1. Order 是领域实体，没有接口定义，只能使用具体类；2. 测试流式接口链式调用，只需要验证属性设置；3. Mock 对象简化了测试设置，避免创建复杂的实体依赖。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $order = $this->createMock(Order::class);
+        /* 使用具体类 Identifier 进行 mock，原因是：1. Identifier 是领域实体，没有接口定义，只能使用具体类；2. 测试流式接口链式调用，只需要验证属性设置；3. Mock 对象简化了测试设置，避免创建复杂的实体依赖。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
         $identifier = $this->createMock(Identifier::class);
         $url = 'https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456';
         $expiry = new \DateTimeImmutable('+30 days');
 
-        $result = $this->authorization
-            ->setOrder($order)
-            ->setIdentifier($identifier)
-            ->setAuthorizationUrl($url)
-            ->setStatus(AuthorizationStatus::VALID)
-            ->setExpiresTime($expiry)
-            ->setWildcard(true)
-            ->setValid(true);
+        $authorization->setOrder($order);
+        $authorization->setIdentifier($identifier);
+        $authorization->setAuthorizationUrl($url);
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $authorization->setExpiresTime($expiry);
+        $authorization->setWildcard(true);
+        $authorization->setValid(true);
+        $result = $authorization;
 
-        $this->assertSame($this->authorization, $result);
-        $this->assertSame($order, $this->authorization->getOrder());
-        $this->assertSame($identifier, $this->authorization->getIdentifier());
-        $this->assertSame($url, $this->authorization->getAuthorizationUrl());
-        $this->assertSame(AuthorizationStatus::VALID, $this->authorization->getStatus());
-        $this->assertSame($expiry, $this->authorization->getExpiresTime());
-        $this->assertTrue($this->authorization->isWildcard());
-        $this->assertTrue($this->authorization->isValid());
+        $this->assertSame($authorization, $result);
+        $this->assertSame($order, $authorization->getOrder());
+        $this->assertSame($identifier, $authorization->getIdentifier());
+        $this->assertSame($url, $authorization->getAuthorizationUrl());
+        $this->assertSame(AuthorizationStatus::VALID, $authorization->getStatus());
+        $this->assertSame($expiry, $authorization->getExpiresTime());
+        $this->assertTrue($authorization->isWildcard());
+        $this->assertTrue($authorization->isValid());
     }
 
-    public function test_businessScenario_authorizationCreation(): void
+    public function testBusinessScenarioAuthorizationCreation(): void
     {
+        /* 使用具体类 Order 进行 mock，原因是：1. Order 是领域实体，没有接口定义，只能使用具体类；2. 测试授权创建的业务场景，需要模拟关联实体；3. Mock 对象足以验证业务逻辑，无需真实实体。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $order = $this->createMock(Order::class);
+        /* 使用具体类 Identifier 进行 mock，原因是：1. Identifier 是领域实体，没有接口定义，只能使用具体类；2. 测试授权创建的业务场景，需要模拟关联实体；3. Mock 对象足以验证业务逻辑，无需真实实体。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
         $identifier = $this->createMock(Identifier::class);
 
-        $this->authorization
-            ->setOrder($order)
-            ->setIdentifier($identifier)
-            ->setAuthorizationUrl('https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456')
-            ->setStatus(AuthorizationStatus::PENDING)
-            ->setExpiresTime(new \DateTimeImmutable('+30 days'));
+        $authorization->setOrder($order);
+        $authorization->setIdentifier($identifier);
+        $authorization->setAuthorizationUrl('https://acme-v02.api.letsencrypt.org/acme/authz-v3/123456');
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $authorization->setExpiresTime(new \DateTimeImmutable('+30 days'));
 
-        $this->assertTrue($this->authorization->isPending());
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertFalse($this->authorization->isExpired());
-        $this->assertFalse($this->authorization->isInvalid());
-        $this->assertFalse($this->authorization->isRevoked());
+        $this->assertTrue($authorization->isPending());
+        $this->assertFalse($authorization->isValid());
+        $this->assertFalse($authorization->isExpired());
+        $this->assertFalse($authorization->isInvalid());
+        $this->assertFalse($authorization->isRevoked());
     }
 
-    public function test_businessScenario_authorizationProgression(): void
+    public function testBusinessScenarioAuthorizationProgression(): void
     {
+        $authorization = $this->createEntity();
+
         // 初始状态：等待中
-        $this->authorization->setStatus(AuthorizationStatus::PENDING);
-        $this->assertTrue($this->authorization->isPending());
-        $this->assertFalse($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $this->assertTrue($authorization->isPending());
+        $this->assertFalse($authorization->isValid());
 
         // 授权有效
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isPending());
-        $this->assertTrue($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isPending());
+        $this->assertTrue($authorization->isValid());
 
         // 授权过期
-        $this->authorization->setStatus(AuthorizationStatus::EXPIRED);
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertTrue($this->authorization->isExpired());
+        $authorization->setStatus(AuthorizationStatus::EXPIRED);
+        $this->assertFalse($authorization->isValid());
+        $this->assertTrue($authorization->isExpired());
     }
 
-    public function test_businessScenario_authorizationFailure(): void
+    public function testBusinessScenarioAuthorizationFailure(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::INVALID);
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::INVALID);
 
-        $this->assertTrue($this->authorization->isInvalid());
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertFalse($this->authorization->isPending());
+        $this->assertTrue($authorization->isInvalid());
+        $this->assertFalse($authorization->isValid());
+        $this->assertFalse($authorization->isPending());
     }
 
-    public function test_businessScenario_authorizationRevocation(): void
+    public function testBusinessScenarioAuthorizationRevocation(): void
     {
+        $authorization = $this->createEntity();
+
         // 有效的授权
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertTrue($this->authorization->isValid());
-        $this->assertFalse($this->authorization->isRevoked());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertTrue($authorization->isValid());
+        $this->assertFalse($authorization->isRevoked());
 
         // 被撤销
-        $this->authorization->setStatus(AuthorizationStatus::REVOKED);
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertTrue($this->authorization->isRevoked());
+        $authorization->setStatus(AuthorizationStatus::REVOKED);
+        $this->assertFalse($authorization->isValid());
+        $this->assertTrue($authorization->isRevoked());
     }
 
-    public function test_businessScenario_wildcardAuthorization(): void
+    public function testBusinessScenarioWildcardAuthorization(): void
     {
+        /* 使用具体类 Identifier 进行 mock，原因是：1. Identifier 是领域实体，没有接口定义，只能使用具体类；2. 测试通配符授权场景，只需要验证 wildcard 标志；3. Mock 对象简化了测试设置，专注于业务逻辑。这种使用是必要且合理的，因为在单元测试中模拟实体关联是标准做法。 */
+        $authorization = $this->createEntity();
         $identifier = $this->createMock(Identifier::class);
 
-        $this->authorization
-            ->setIdentifier($identifier)
-            ->setWildcard(true)
-            ->setStatus(AuthorizationStatus::VALID);
+        $authorization->setIdentifier($identifier);
+        $authorization->setWildcard(true);
+        $authorization->setStatus(AuthorizationStatus::VALID);
 
-        $this->assertTrue($this->authorization->isWildcard());
-        $this->assertTrue($this->authorization->isValid());
+        $this->assertTrue($authorization->isWildcard());
+        $this->assertTrue($authorization->isValid());
     }
 
-    public function test_businessScenario_multipleChallenges(): void
+    public function testBusinessScenarioMultipleChallenges(): void
     {
+        /*
+         * 使用具体类 Challenge 进行 mock：
+         * 1. Challenge 是领域实体，没有接口定义，只能使用具体类
+         * 2. 需要多个独立的 mock 实例来模拟真实的多挑战场景
+         * 3. 测试重点是集合管理，不需要 Challenge 的具体业务逻辑
+         */
+        $authorization = $this->createEntity();
         $challenge1 = $this->createMock(Challenge::class);
+        /*
+         * 使用具体类 Challenge 进行 mock：
+         * 1. Challenge 是领域实体，没有接口定义，只能使用具体类
+         * 2. 需要多个独立的 mock 实例来模拟真实的多挑战场景
+         * 3. 测试重点是集合管理，不需要 Challenge 的具体业务逻辑
+         */
         $challenge2 = $this->createMock(Challenge::class);
+        /*
+         * 使用具体类 Challenge 进行 mock：
+         * 1. Challenge 是领域实体，没有接口定义，只能使用具体类
+         * 2. 需要多个独立的 mock 实例来模拟真实的多挑战场景
+         * 3. 测试重点是集合管理，不需要 Challenge 的具体业务逻辑
+         */
         $challenge3 = $this->createMock(Challenge::class);
 
-        $this->authorization
-            ->addChallenge($challenge1)
-            ->addChallenge($challenge2)
-            ->addChallenge($challenge3);
+        $authorization->addChallenge($challenge1);
+        $authorization->addChallenge($challenge2);
+        $authorization->addChallenge($challenge3);
 
-        $this->assertSame(3, $this->authorization->getChallenges()->count());
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge1));
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge2));
-        $this->assertTrue($this->authorization->getChallenges()->contains($challenge3));
+        $this->assertSame(3, $authorization->getChallenges()->count());
+        $this->assertTrue($authorization->getChallenges()->contains($challenge1));
+        $this->assertTrue($authorization->getChallenges()->contains($challenge2));
+        $this->assertTrue($authorization->getChallenges()->contains($challenge3));
     }
 
-    public function test_edgeCases_nullExpiresTime(): void
+    public function testEdgeCasesNullExpiresTime(): void
     {
-        $this->authorization->setExpiresTime(null);
-        $this->assertNull($this->authorization->getExpiresTime());
-        $this->assertFalse($this->authorization->isExpired());
+        $authorization = $this->createEntity();
+        $authorization->setExpiresTime(null);
+        $this->assertNull($authorization->getExpiresTime());
+        $this->assertFalse($authorization->isExpired());
     }
 
-    public function test_edgeCases_emptyUrl(): void
+    public function testEdgeCasesEmptyUrl(): void
     {
-        $this->authorization->setAuthorizationUrl('');
-        $this->assertSame('', $this->authorization->getAuthorizationUrl());
+        $authorization = $this->createEntity();
+        $authorization->setAuthorizationUrl('');
+        $this->assertSame('', $authorization->getAuthorizationUrl());
     }
 
-    public function test_edgeCases_longUrl(): void
+    public function testEdgeCasesLongUrl(): void
     {
+        $authorization = $this->createEntity();
         $longUrl = 'https://acme-v02.api.letsencrypt.org/acme/authz-v3/' . str_repeat('a', 400);
-        $this->authorization->setAuthorizationUrl($longUrl);
+        $authorization->setAuthorizationUrl($longUrl);
 
-        $this->assertSame($longUrl, $this->authorization->getAuthorizationUrl());
+        $this->assertSame($longUrl, $authorization->getAuthorizationUrl());
     }
 
-    public function test_stateTransitions_pendingToValid(): void
+    public function testStateTransitionsPendingToValid(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::PENDING);
-        $this->assertTrue($this->authorization->isPending());
-        $this->assertFalse($this->authorization->isValid());
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $this->assertTrue($authorization->isPending());
+        $this->assertFalse($authorization->isValid());
 
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertFalse($this->authorization->isPending());
-        $this->assertTrue($this->authorization->isValid());
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertFalse($authorization->isPending());
+        $this->assertTrue($authorization->isValid());
     }
 
-    public function test_stateTransitions_validToExpired(): void
+    public function testStateTransitionsValidToExpired(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertTrue($this->authorization->isValid());
-        $this->assertFalse($this->authorization->isExpired());
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertTrue($authorization->isValid());
+        $this->assertFalse($authorization->isExpired());
 
-        $this->authorization->setStatus(AuthorizationStatus::EXPIRED);
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertTrue($this->authorization->isExpired());
+        $authorization->setStatus(AuthorizationStatus::EXPIRED);
+        $this->assertFalse($authorization->isValid());
+        $this->assertTrue($authorization->isExpired());
     }
 
-    public function test_stateTransitions_validToRevoked(): void
+    public function testStateTransitionsValidToRevoked(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::VALID);
-        $this->assertTrue($this->authorization->isValid());
-        $this->assertFalse($this->authorization->isRevoked());
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::VALID);
+        $this->assertTrue($authorization->isValid());
+        $this->assertFalse($authorization->isRevoked());
 
-        $this->authorization->setStatus(AuthorizationStatus::REVOKED);
-        $this->assertFalse($this->authorization->isValid());
-        $this->assertTrue($this->authorization->isRevoked());
+        $authorization->setStatus(AuthorizationStatus::REVOKED);
+        $this->assertFalse($authorization->isValid());
+        $this->assertTrue($authorization->isRevoked());
     }
 
-    public function test_stateTransitions_pendingToInvalid(): void
+    public function testStateTransitionsPendingToInvalid(): void
     {
-        $this->authorization->setStatus(AuthorizationStatus::PENDING);
-        $this->assertTrue($this->authorization->isPending());
-        $this->assertFalse($this->authorization->isInvalid());
+        $authorization = $this->createEntity();
+        $authorization->setStatus(AuthorizationStatus::PENDING);
+        $this->assertTrue($authorization->isPending());
+        $this->assertFalse($authorization->isInvalid());
 
-        $this->authorization->setStatus(AuthorizationStatus::INVALID);
-        $this->assertFalse($this->authorization->isPending());
-        $this->assertTrue($this->authorization->isInvalid());
+        $authorization->setStatus(AuthorizationStatus::INVALID);
+        $this->assertFalse($authorization->isPending());
+        $this->assertTrue($authorization->isInvalid());
+    }
+
+    protected function createEntity(): Authorization
+    {
+        return new Authorization();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'authorizationUrl' => ['authorizationUrl', 'https://acme.example.com/authz/123'];
+        yield 'status' => ['status', AuthorizationStatus::VALID];
+        yield 'expiresTime' => ['expiresTime', new \DateTimeImmutable('+30 days')];
+        yield 'wildcard' => ['wildcard', true];
+        yield 'valid' => ['valid', true];
     }
 }

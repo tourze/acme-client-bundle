@@ -6,6 +6,7 @@ namespace Tourze\ACMEClientBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\ACMEClientBundle\Enum\CertificateStatus;
 use Tourze\ACMEClientBundle\Repository\CertificateRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -18,9 +19,6 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  */
 #[ORM\Entity(repositoryClass: CertificateRepository::class)]
 #[ORM\Table(name: 'acme_certificates', options: ['comment' => 'ACME 证书表，存储签发的证书信息'])]
-#[ORM\Index(columns: ['not_before_time'], name: 'idx_certificate_not_before')]
-#[ORM\Index(columns: ['not_after_time'], name: 'idx_certificate_not_after')]
-#[ORM\Index(columns: ['serial_number'], name: 'idx_certificate_serial')]
 class Certificate implements \Stringable
 {
     use TimestampableAware;
@@ -28,53 +26,82 @@ class Certificate implements \Stringable
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore-line property.unusedType (Doctrine auto-assigns after persist)
 
-    #[ORM\OneToOne(targetEntity: Order::class, inversedBy: 'certificate')]
+    #[ORM\ManyToOne(targetEntity: Order::class, inversedBy: 'certificates', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
-    #[IndexColumn]
+    #[Assert\NotNull]
     private ?Order $order = null;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: CertificateStatus::class, options: ['comment' => '证书状态'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Choice(callback: [CertificateStatus::class, 'cases'], message: '请选择有效的证书状态')]
     private CertificateStatus $status = CertificateStatus::VALID;
 
     #[ORM\Column(type: Types::TEXT, options: ['comment' => '证书内容（PEM 格式）'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 65535, maxMessage: '证书内容长度不能超过 {{ limit }} 个字符')]
     private string $certificatePem;
 
     #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '证书链（PEM 格式）'])]
+    #[Assert\Length(max: 65535, maxMessage: '证书链长度不能超过 {{ limit }} 个字符')]
     private ?string $certificateChainPem = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '私钥（PEM 格式）'])]
+    #[Assert\Length(max: 65535, maxMessage: '私钥长度不能超过 {{ limit }} 个字符')]
     private ?string $privateKeyPem = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '证书序列号'])]
     #[IndexColumn]
+    #[Assert\Length(max: 255)]
     private ?string $serialNumber = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '证书指纹（SHA256）'])]
+    #[Assert\Length(max: 500)]
     private ?string $fingerprint = null;
 
-
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '颁发机构'])]
+    #[Assert\Length(max: 500)]
     private ?string $issuer = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书生效时间'])]
+    #[IndexColumn]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '证书生效时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $notBeforeTime = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书过期时间'])]
     #[IndexColumn]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '证书过期时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $notAfterTime = null;
 
+    /**
+     * @var array<string>
+     */
     #[ORM\Column(type: Types::JSON, options: ['comment' => '证书包含的域名列表'])]
+    #[Assert\NotBlank]
+    #[Assert\Type(type: 'array')]
     private array $domains = [];
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '证书是否有效'])]
+    #[Assert\Type(type: 'bool', message: '有效状态必须是布尔值')]
     private bool $valid = true;
 
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书撤销时间'])]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '撤销时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $revokedTime = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书过期时间（兼容旧代码）'])]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '过期时间必须是有效的日期时间格式')]
+    private ?\DateTimeImmutable $expiresTime = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '证书签发时间'])]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '签发时间必须是有效的日期时间格式')]
+    private ?\DateTimeImmutable $issuedTime = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '证书数据（JSON格式）'])]
+    #[Assert\Length(max: 65535, maxMessage: '证书数据长度不能超过 {{ limit }} 个字符')]
+    private ?string $certificateData = null;
 
     public function __toString(): string
     {
@@ -91,10 +118,9 @@ class Certificate implements \Stringable
         return $this->order;
     }
 
-    public function setOrder(?Order $order): static
+    public function setOrder(?Order $order): void
     {
         $this->order = $order;
-        return $this;
     }
 
     public function getStatus(): CertificateStatus
@@ -102,11 +128,10 @@ class Certificate implements \Stringable
         return $this->status;
     }
 
-    public function setStatus(CertificateStatus $status): static
+    public function setStatus(CertificateStatus $status): void
     {
         $this->status = $status;
-        $this->valid = ($status === CertificateStatus::VALID);
-        return $this;
+        $this->valid = (CertificateStatus::VALID === $status);
     }
 
     public function getCertificatePem(): string
@@ -114,10 +139,9 @@ class Certificate implements \Stringable
         return $this->certificatePem;
     }
 
-    public function setCertificatePem(string $certificatePem): static
+    public function setCertificatePem(string $certificatePem): void
     {
         $this->certificatePem = $certificatePem;
-        return $this;
     }
 
     public function getCertificateChainPem(): ?string
@@ -125,10 +149,9 @@ class Certificate implements \Stringable
         return $this->certificateChainPem;
     }
 
-    public function setCertificateChainPem(?string $certificateChainPem): static
+    public function setCertificateChainPem(?string $certificateChainPem): void
     {
         $this->certificateChainPem = $certificateChainPem;
-        return $this;
     }
 
     public function getPrivateKeyPem(): ?string
@@ -136,10 +159,9 @@ class Certificate implements \Stringable
         return $this->privateKeyPem;
     }
 
-    public function setPrivateKeyPem(?string $privateKeyPem): static
+    public function setPrivateKeyPem(?string $privateKeyPem): void
     {
         $this->privateKeyPem = $privateKeyPem;
-        return $this;
     }
 
     public function getSerialNumber(): ?string
@@ -147,10 +169,9 @@ class Certificate implements \Stringable
         return $this->serialNumber;
     }
 
-    public function setSerialNumber(?string $serialNumber): static
+    public function setSerialNumber(?string $serialNumber): void
     {
         $this->serialNumber = $serialNumber;
-        return $this;
     }
 
     public function getFingerprint(): ?string
@@ -158,21 +179,25 @@ class Certificate implements \Stringable
         return $this->fingerprint;
     }
 
-    public function setFingerprint(?string $fingerprint): static
+    public function setFingerprint(?string $fingerprint): void
     {
         $this->fingerprint = $fingerprint;
-        return $this;
     }
 
+    /**
+     * @return array<string>
+     */
     public function getDomains(): array
     {
         return $this->domains;
     }
 
-    public function setDomains(array $domains): static
+    /**
+     * @param array<string> $domains
+     */
+    public function setDomains(array $domains): void
     {
         $this->domains = $domains;
-        return $this;
     }
 
     public function getNotBeforeTime(): ?\DateTimeImmutable
@@ -180,10 +205,9 @@ class Certificate implements \Stringable
         return $this->notBeforeTime;
     }
 
-    public function setNotBeforeTime(?\DateTimeImmutable $notBeforeTime): static
+    public function setNotBeforeTime(?\DateTimeImmutable $notBeforeTime): void
     {
         $this->notBeforeTime = $notBeforeTime;
-        return $this;
     }
 
     public function getNotAfterTime(): ?\DateTimeImmutable
@@ -191,10 +215,9 @@ class Certificate implements \Stringable
         return $this->notAfterTime;
     }
 
-    public function setNotAfterTime(?\DateTimeImmutable $notAfterTime): static
+    public function setNotAfterTime(?\DateTimeImmutable $notAfterTime): void
     {
         $this->notAfterTime = $notAfterTime;
-        return $this;
     }
 
     public function getIssuer(): ?string
@@ -202,10 +225,9 @@ class Certificate implements \Stringable
         return $this->issuer;
     }
 
-    public function setIssuer(?string $issuer): static
+    public function setIssuer(?string $issuer): void
     {
         $this->issuer = $issuer;
-        return $this;
     }
 
     public function isValid(): bool
@@ -213,20 +235,19 @@ class Certificate implements \Stringable
         return $this->valid;
     }
 
-    public function setValid(bool $valid): static
+    public function setValid(bool $valid): void
     {
         $this->valid = $valid;
-        return $this;
     }
 
     public function isExpired(): bool
     {
-        return $this->notAfterTime !== null && $this->notAfterTime < new \DateTime();
+        return null !== $this->notAfterTime && $this->notAfterTime < new \DateTime();
     }
 
     public function isRevoked(): bool
     {
-        return $this->status === CertificateStatus::REVOKED;
+        return CertificateStatus::REVOKED === $this->status;
     }
 
     public function getRevokedTime(): ?\DateTimeImmutable
@@ -234,10 +255,9 @@ class Certificate implements \Stringable
         return $this->revokedTime;
     }
 
-    public function setRevokedTime(?\DateTimeImmutable $revokedTime): static
+    public function setRevokedTime(?\DateTimeImmutable $revokedTime): void
     {
         $this->revokedTime = $revokedTime;
-        return $this;
     }
 
     /**
@@ -245,11 +265,12 @@ class Certificate implements \Stringable
      */
     public function isExpiringWithin(int $days = 30): bool
     {
-        if ($this->notAfterTime === null) {
+        if (null === $this->notAfterTime) {
             return false;
         }
 
         $threshold = new \DateTimeImmutable("+{$days} days");
+
         return $this->notAfterTime <= $threshold;
     }
 
@@ -258,14 +279,19 @@ class Certificate implements \Stringable
      */
     public function getDaysUntilExpiry(): ?int
     {
-        if ($this->notAfterTime === null) {
+        if (null === $this->notAfterTime) {
             return null;
         }
 
         $now = new \DateTime();
         $interval = $now->diff($this->notAfterTime);
+        $days = $interval->days;
 
-        return $interval->invert === 1 ? -$interval->days : $interval->days;
+        if (false === $days) {
+            return null;
+        }
+
+        return 1 === $interval->invert ? -$days : $days;
     }
 
     /**
@@ -273,7 +299,7 @@ class Certificate implements \Stringable
      */
     public function getFullChainPem(): string
     {
-        if ($this->certificateChainPem === null) {
+        if (null === $this->certificateChainPem) {
             return $this->certificatePem;
         }
 
@@ -286,5 +312,43 @@ class Certificate implements \Stringable
     public function containsDomain(string $domain): bool
     {
         return in_array($domain, $this->domains, true);
+    }
+
+    public function getExpiresTime(): ?\DateTimeImmutable
+    {
+        return $this->expiresTime;
+    }
+
+    public function setExpiresTime(?\DateTimeImmutable $expiresTime): void
+    {
+        $this->expiresTime = $expiresTime;
+        // 同步更新 notAfterTime
+        if (null !== $expiresTime) {
+            $this->notAfterTime = $expiresTime;
+        }
+    }
+
+    public function getIssuedTime(): ?\DateTimeImmutable
+    {
+        return $this->issuedTime;
+    }
+
+    public function setIssuedTime(?\DateTimeImmutable $issuedTime): void
+    {
+        $this->issuedTime = $issuedTime;
+        // 同步更新 notBeforeTime
+        if (null !== $issuedTime) {
+            $this->notBeforeTime = $issuedTime;
+        }
+    }
+
+    public function getCertificateData(): ?string
+    {
+        return $this->certificateData;
+    }
+
+    public function setCertificateData(?string $certificateData): void
+    {
+        $this->certificateData = $certificateData;
     }
 }

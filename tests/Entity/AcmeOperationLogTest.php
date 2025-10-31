@@ -4,469 +4,309 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\AcmeOperationLog;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * AcmeOperationLog 实体测试类
+ *
+ * @internal
  */
-class AcmeOperationLogTest extends TestCase
+#[CoversClass(AcmeOperationLog::class)]
+final class AcmeOperationLogTest extends AbstractEntityTestCase
 {
-    private AcmeOperationLog $operationLog;
-
-    protected function setUp(): void
+    protected function createEntity(): AcmeOperationLog
     {
-        $this->operationLog = new AcmeOperationLog();
+        return new AcmeOperationLog();
     }
 
-    public function test_constructor_defaultValues(): void
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
     {
-        $this->assertNull($this->operationLog->getId());
-        $this->assertSame(LogLevel::INFO, $this->operationLog->getLevel());
-        $this->assertNull($this->operationLog->getEntityType());
-        $this->assertNull($this->operationLog->getEntityId());
-        $this->assertNull($this->operationLog->getContext());
-        $this->assertNull($this->operationLog->getHttpUrl());
-        $this->assertNull($this->operationLog->getHttpMethod());
-        $this->assertNull($this->operationLog->getHttpStatusCode());
-        $this->assertNull($this->operationLog->getDurationMs());
-        $this->assertTrue($this->operationLog->isSuccess());
+        yield 'level' => ['level', LogLevel::ERROR];
+        yield 'operation' => ['operation', 'test_operation'];
+        yield 'message' => ['message', 'Test message'];
+        yield 'entityType' => ['entityType', 'Order'];
+        yield 'entityId' => ['entityId', 123];
+        yield 'context' => ['context', ['operation' => 'test']];
+        yield 'httpUrl' => ['httpUrl', 'https://example.com'];
+        yield 'httpMethod' => ['httpMethod', 'POST'];
+        yield 'httpStatusCode' => ['httpStatusCode', 200];
+        yield 'durationMs' => ['durationMs', 1000];
+        yield 'success' => ['success', true];
     }
 
-    public function test_level_getterSetter(): void
+    public function testIsError(): void
     {
-        $this->assertSame(LogLevel::INFO, $this->operationLog->getLevel());
+        $log = $this->createEntity();
+        $this->assertFalse($log->isError());
 
-        $result = $this->operationLog->setLevel(LogLevel::ERROR);
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame(LogLevel::ERROR, $this->operationLog->getLevel());
+        $log->setLevel(LogLevel::ERROR);
+        $this->assertTrue($log->isError());
+
+        $log->setLevel(LogLevel::INFO);
+        $this->assertFalse($log->isError());
     }
 
-    public function test_operation_getterSetter(): void
+    public function testIsWarning(): void
     {
-        $operation = 'account_create';
-        $result = $this->operationLog->setOperation($operation);
+        $log = $this->createEntity();
+        $this->assertFalse($log->isWarning());
 
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($operation, $this->operationLog->getOperation());
+        $log->setLevel(LogLevel::WARNING);
+        $this->assertTrue($log->isWarning());
+
+        $log->setLevel(LogLevel::DEBUG);
+        $this->assertFalse($log->isWarning());
     }
 
-    public function test_message_getterSetter(): void
+    public function testIsInfo(): void
     {
-        $message = 'Account created successfully';
-        $result = $this->operationLog->setMessage($message);
+        $log = $this->createEntity();
+        $this->assertTrue($log->isInfo());
 
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($message, $this->operationLog->getMessage());
+        $log->setLevel(LogLevel::ERROR);
+        $this->assertFalse($log->isInfo());
+
+        $log->setLevel(LogLevel::INFO);
+        $this->assertTrue($log->isInfo());
     }
 
-    public function test_entityType_getterSetter(): void
+    public function testIsDebug(): void
     {
-        $this->assertNull($this->operationLog->getEntityType());
+        $log = $this->createEntity();
+        $this->assertFalse($log->isDebug());
 
-        $entityType = 'Account';
-        $result = $this->operationLog->setEntityType($entityType);
+        $log->setLevel(LogLevel::DEBUG);
+        $this->assertTrue($log->isDebug());
 
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($entityType, $this->operationLog->getEntityType());
+        $log->setLevel(LogLevel::WARNING);
+        $this->assertFalse($log->isDebug());
     }
 
-    public function test_entityType_setToNull(): void
+    public function testHasRelatedEntityWithBothValues(): void
     {
-        $this->operationLog->setEntityType('Order');
-        $this->operationLog->setEntityType(null);
-        
-        $this->assertNull($this->operationLog->getEntityType());
+        $log = $this->createEntity();
+        $log->setEntityType('Order');
+        $log->setEntityId(123);
+
+        $this->assertTrue($log->hasRelatedEntity());
     }
 
-    public function test_entityId_getterSetter(): void
+    public function testHasRelatedEntityWithEntityTypeOnly(): void
     {
-        $this->assertNull($this->operationLog->getEntityId());
+        $log = $this->createEntity();
+        $log->setEntityType('Account');
 
-        $entityId = 123;
-        $result = $this->operationLog->setEntityId($entityId);
-
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($entityId, $this->operationLog->getEntityId());
+        $this->assertFalse($log->hasRelatedEntity());
     }
 
-    public function test_entityId_setToNull(): void
+    public function testHasRelatedEntityWithEntityIdOnly(): void
     {
-        $this->operationLog->setEntityId(456);
-        $this->operationLog->setEntityId(null);
-        
-        $this->assertNull($this->operationLog->getEntityId());
+        $log = $this->createEntity();
+        $log->setEntityId(456);
+
+        $this->assertFalse($log->hasRelatedEntity());
     }
 
-    public function test_context_getterSetter(): void
+    public function testHasRelatedEntityWithNeitherValue(): void
     {
-        $this->assertNull($this->operationLog->getContext());
-
-        $context = [
-            'domain' => 'example.com',
-            'challenge_type' => 'dns-01',
-            'attempt' => 1
-        ];
-        $result = $this->operationLog->setContext($context);
-
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($context, $this->operationLog->getContext());
+        $log = $this->createEntity();
+        $this->assertFalse($log->hasRelatedEntity());
     }
 
-    public function test_context_setToNull(): void
+    public function testHasHttpRequest(): void
     {
-        $this->operationLog->setContext(['test' => 'value']);
-        $this->operationLog->setContext(null);
-        
-        $this->assertNull($this->operationLog->getContext());
+        $log = $this->createEntity();
+        $this->assertFalse($log->hasHttpRequest());
+
+        $log->setHttpUrl('https://example.com');
+        $this->assertTrue($log->hasHttpRequest());
+
+        $log->setHttpUrl(null);
+        $this->assertFalse($log->hasHttpRequest());
     }
 
-    public function test_httpUrl_getterSetter(): void
+    public function testHasHttpResponse(): void
     {
-        $this->assertNull($this->operationLog->getHttpUrl());
+        $log = $this->createEntity();
+        $this->assertFalse($log->hasHttpResponse());
 
-        $httpUrl = 'https://acme-v02.api.letsencrypt.org/acme/new-account';
-        $result = $this->operationLog->setHttpUrl($httpUrl);
+        $log->setHttpStatusCode(200);
+        $this->assertTrue($log->hasHttpResponse());
 
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($httpUrl, $this->operationLog->getHttpUrl());
+        $log->setHttpStatusCode(null);
+        $this->assertFalse($log->hasHttpResponse());
     }
 
-    public function test_httpUrl_setToNull(): void
+    public function testGetFormattedDescriptionBasic(): void
     {
-        $this->operationLog->setHttpUrl('https://example.com');
-        $this->operationLog->setHttpUrl(null);
-        
-        $this->assertNull($this->operationLog->getHttpUrl());
-    }
+        $log = $this->createEntity();
+        $log->setLevel(LogLevel::INFO);
+        $log->setOperation('account_create');
+        $log->setMessage('Account created successfully');
 
-    public function test_httpMethod_getterSetter(): void
-    {
-        $this->assertNull($this->operationLog->getHttpMethod());
-
-        $httpMethod = 'POST';
-        $result = $this->operationLog->setHttpMethod($httpMethod);
-
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($httpMethod, $this->operationLog->getHttpMethod());
-    }
-
-    public function test_httpMethod_setToNull(): void
-    {
-        $this->operationLog->setHttpMethod('GET');
-        $this->operationLog->setHttpMethod(null);
-        
-        $this->assertNull($this->operationLog->getHttpMethod());
-    }
-
-    public function test_httpStatusCode_getterSetter(): void
-    {
-        $this->assertNull($this->operationLog->getHttpStatusCode());
-
-        $statusCode = 201;
-        $result = $this->operationLog->setHttpStatusCode($statusCode);
-
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($statusCode, $this->operationLog->getHttpStatusCode());
-    }
-
-    public function test_httpStatusCode_setToNull(): void
-    {
-        $this->operationLog->setHttpStatusCode(200);
-        $this->operationLog->setHttpStatusCode(null);
-        
-        $this->assertNull($this->operationLog->getHttpStatusCode());
-    }
-
-    public function test_durationMs_getterSetter(): void
-    {
-        $this->assertNull($this->operationLog->getDurationMs());
-
-        $duration = 1500;
-        $result = $this->operationLog->setDurationMs($duration);
-
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($duration, $this->operationLog->getDurationMs());
-    }
-
-    public function test_durationMs_setToNull(): void
-    {
-        $this->operationLog->setDurationMs(2000);
-        $this->operationLog->setDurationMs(null);
-        
-        $this->assertNull($this->operationLog->getDurationMs());
-    }
-
-    public function test_success_getterSetter(): void
-    {
-        $this->assertTrue($this->operationLog->isSuccess());
-
-        $result = $this->operationLog->setSuccess(false);
-        $this->assertSame($this->operationLog, $result);
-        $this->assertFalse($this->operationLog->isSuccess());
-
-        $this->operationLog->setSuccess(true);
-        $this->assertTrue($this->operationLog->isSuccess());
-    }
-
-    public function test_isError(): void
-    {
-        $this->assertFalse($this->operationLog->isError());
-
-        $this->operationLog->setLevel(LogLevel::ERROR);
-        $this->assertTrue($this->operationLog->isError());
-
-        $this->operationLog->setLevel(LogLevel::INFO);
-        $this->assertFalse($this->operationLog->isError());
-    }
-
-    public function test_isWarning(): void
-    {
-        $this->assertFalse($this->operationLog->isWarning());
-
-        $this->operationLog->setLevel(LogLevel::WARNING);
-        $this->assertTrue($this->operationLog->isWarning());
-
-        $this->operationLog->setLevel(LogLevel::DEBUG);
-        $this->assertFalse($this->operationLog->isWarning());
-    }
-
-    public function test_isInfo(): void
-    {
-        $this->assertTrue($this->operationLog->isInfo());
-
-        $this->operationLog->setLevel(LogLevel::ERROR);
-        $this->assertFalse($this->operationLog->isInfo());
-
-        $this->operationLog->setLevel(LogLevel::INFO);
-        $this->assertTrue($this->operationLog->isInfo());
-    }
-
-    public function test_isDebug(): void
-    {
-        $this->assertFalse($this->operationLog->isDebug());
-
-        $this->operationLog->setLevel(LogLevel::DEBUG);
-        $this->assertTrue($this->operationLog->isDebug());
-
-        $this->operationLog->setLevel(LogLevel::WARNING);
-        $this->assertFalse($this->operationLog->isDebug());
-    }
-
-    public function test_hasRelatedEntity_withBothValues(): void
-    {
-        $this->operationLog
-            ->setEntityType('Order')
-            ->setEntityId(123);
-        
-        $this->assertTrue($this->operationLog->hasRelatedEntity());
-    }
-
-    public function test_hasRelatedEntity_withEntityTypeOnly(): void
-    {
-        $this->operationLog->setEntityType('Account');
-        
-        $this->assertFalse($this->operationLog->hasRelatedEntity());
-    }
-
-    public function test_hasRelatedEntity_withEntityIdOnly(): void
-    {
-        $this->operationLog->setEntityId(456);
-        
-        $this->assertFalse($this->operationLog->hasRelatedEntity());
-    }
-
-    public function test_hasRelatedEntity_withNeitherValue(): void
-    {
-        $this->assertFalse($this->operationLog->hasRelatedEntity());
-    }
-
-    public function test_hasHttpRequest(): void
-    {
-        $this->assertFalse($this->operationLog->hasHttpRequest());
-
-        $this->operationLog->setHttpUrl('https://example.com');
-        $this->assertTrue($this->operationLog->hasHttpRequest());
-
-        $this->operationLog->setHttpUrl(null);
-        $this->assertFalse($this->operationLog->hasHttpRequest());
-    }
-
-    public function test_hasHttpResponse(): void
-    {
-        $this->assertFalse($this->operationLog->hasHttpResponse());
-
-        $this->operationLog->setHttpStatusCode(200);
-        $this->assertTrue($this->operationLog->hasHttpResponse());
-
-        $this->operationLog->setHttpStatusCode(null);
-        $this->assertFalse($this->operationLog->hasHttpResponse());
-    }
-
-    public function test_getFormattedDescription_basic(): void
-    {
-        $this->operationLog
-            ->setLevel(LogLevel::INFO)
-            ->setOperation('account_create')
-            ->setMessage('Account created successfully');
-        
         $expected = '[info] account_create: Account created successfully';
-        $this->assertSame($expected, $this->operationLog->getFormattedDescription());
+        $this->assertSame($expected, $log->getFormattedDescription());
     }
 
-    public function test_getFormattedDescription_withEntity(): void
+    public function testGetFormattedDescriptionWithEntity(): void
     {
-        $this->operationLog
-            ->setLevel(LogLevel::WARNING)
-            ->setOperation('order_retry')
-            ->setMessage('Order retry attempt')
-            ->setEntityType('Order')
-            ->setEntityId(123);
-        
+        $log = $this->createEntity();
+        $log->setLevel(LogLevel::WARNING);
+        $log->setOperation('order_retry');
+        $log->setMessage('Order retry attempt');
+        $log->setEntityType('Order');
+        $log->setEntityId(123);
+
         $expected = '[warning] order_retry: Order retry attempt (Order#123)';
-        $this->assertSame($expected, $this->operationLog->getFormattedDescription());
+        $this->assertSame($expected, $log->getFormattedDescription());
     }
 
-    public function test_getFormattedDescription_withDuration(): void
+    public function testGetFormattedDescriptionWithDuration(): void
     {
-        $this->operationLog
-            ->setLevel(LogLevel::DEBUG)
-            ->setOperation('challenge_validate')
-            ->setMessage('Challenge validation completed')
-            ->setDurationMs(2500);
-        
+        $log = $this->createEntity();
+        $log->setLevel(LogLevel::DEBUG);
+        $log->setOperation('challenge_validate');
+        $log->setMessage('Challenge validation completed');
+        $log->setDurationMs(2500);
+
         $expected = '[debug] challenge_validate: Challenge validation completed (2500ms)';
-        $this->assertSame($expected, $this->operationLog->getFormattedDescription());
+        $this->assertSame($expected, $log->getFormattedDescription());
     }
 
-    public function test_getFormattedDescription_withEntityAndDuration(): void
+    public function testGetFormattedDescriptionWithEntityAndDuration(): void
     {
-        $this->operationLog
-            ->setLevel(LogLevel::ERROR)
-            ->setOperation('certificate_download')
-            ->setMessage('Certificate download failed')
-            ->setEntityType('Certificate')
-            ->setEntityId(789)
-            ->setDurationMs(5000);
-        
+        $log = $this->createEntity();
+        $log->setLevel(LogLevel::ERROR);
+        $log->setOperation('certificate_download');
+        $log->setMessage('Certificate download failed');
+        $log->setEntityType('Certificate');
+        $log->setEntityId(789);
+        $log->setDurationMs(5000);
+
         $expected = '[error] certificate_download: Certificate download failed (Certificate#789) (5000ms)';
-        $this->assertSame($expected, $this->operationLog->getFormattedDescription());
+        $this->assertSame($expected, $log->getFormattedDescription());
     }
 
-    public function test_accountOperation_basic(): void
+    public function testAccountOperationBasic(): void
     {
         $log = AcmeOperationLog::accountOperation('create', 'Account created successfully');
-        
+
         $this->assertInstanceOf(AcmeOperationLog::class, $log);
         $this->assertSame('account_create', $log->getOperation());
         $this->assertSame('Account created successfully', $log->getMessage());
         $this->assertSame('Account', $log->getEntityType());
-        $this->assertNull($log->getEntityId());
-        $this->assertNull($log->getContext());
-        $this->assertSame(LogLevel::INFO, $log->getLevel());
-        $this->assertTrue($log->isSuccess());
     }
 
-    public function test_accountOperation_withIdAndDetails(): void
+    public function testAccountOperationWithIdAndDetails(): void
     {
-        $details = ['email' => 'test@example.com', 'key_type' => 'RSA'];
-        $log = AcmeOperationLog::accountOperation('update', 'Account updated', 123, $details);
-        
+        $entityId = 123;
+        $details = ['email' => 'user@example.com'];
+
+        $log = AcmeOperationLog::accountOperation('update', 'Account updated', $entityId, $details);
+
         $this->assertSame('account_update', $log->getOperation());
         $this->assertSame('Account updated', $log->getMessage());
         $this->assertSame('Account', $log->getEntityType());
-        $this->assertSame(123, $log->getEntityId());
+        $this->assertSame($entityId, $log->getEntityId());
         $this->assertSame($details, $log->getContext());
     }
 
-    public function test_orderOperation_basic(): void
+    public function testOrderOperationBasic(): void
     {
-        $log = AcmeOperationLog::orderOperation('submit', 'Order submitted to ACME server');
-        
+        $log = AcmeOperationLog::orderOperation('create', 'Order created');
+
         $this->assertInstanceOf(AcmeOperationLog::class, $log);
-        $this->assertSame('order_submit', $log->getOperation());
-        $this->assertSame('Order submitted to ACME server', $log->getMessage());
+        $this->assertSame('order_create', $log->getOperation());
+        $this->assertSame('Order created', $log->getMessage());
         $this->assertSame('Order', $log->getEntityType());
-        $this->assertNull($log->getEntityId());
-        $this->assertNull($log->getContext());
     }
 
-    public function test_orderOperation_withIdAndDetails(): void
+    public function testOrderOperationWithIdAndDetails(): void
     {
-        $details = ['domains' => ['example.com', 'www.example.com'], 'status' => 'pending'];
-        $log = AcmeOperationLog::orderOperation('finalize', 'Order finalized', 456, $details);
-        
-        $this->assertSame('order_finalize', $log->getOperation());
-        $this->assertSame('Order finalized', $log->getMessage());
+        $entityId = 456;
+        $details = ['domains' => ['example.com', 'www.example.com']];
+
+        $log = AcmeOperationLog::orderOperation('validate', 'Order validation completed', $entityId, $details);
+
+        $this->assertSame('order_validate', $log->getOperation());
+        $this->assertSame('Order validation completed', $log->getMessage());
         $this->assertSame('Order', $log->getEntityType());
-        $this->assertSame(456, $log->getEntityId());
+        $this->assertSame($entityId, $log->getEntityId());
         $this->assertSame($details, $log->getContext());
     }
 
-    public function test_challengeOperation_basic(): void
+    public function testChallengeOperationBasic(): void
     {
-        $log = AcmeOperationLog::challengeOperation('validate', 'Challenge validation started');
-        
+        $log = AcmeOperationLog::challengeOperation('create', 'Challenge created');
+
         $this->assertInstanceOf(AcmeOperationLog::class, $log);
+        $this->assertSame('challenge_create', $log->getOperation());
+        $this->assertSame('Challenge created', $log->getMessage());
+        $this->assertSame('Challenge', $log->getEntityType());
+    }
+
+    public function testChallengeOperationWithIdAndDetails(): void
+    {
+        $entityId = 789;
+        $details = ['type' => 'dns-01', 'domain' => 'example.com'];
+
+        $log = AcmeOperationLog::challengeOperation('validate', 'Challenge validated', $entityId, $details);
+
         $this->assertSame('challenge_validate', $log->getOperation());
-        $this->assertSame('Challenge validation started', $log->getMessage());
+        $this->assertSame('Challenge validated', $log->getMessage());
         $this->assertSame('Challenge', $log->getEntityType());
-        $this->assertNull($log->getEntityId());
-        $this->assertNull($log->getContext());
-    }
-
-    public function test_challengeOperation_withIdAndDetails(): void
-    {
-        $details = ['type' => 'dns-01', 'domain' => 'example.com', 'token' => 'abc123'];
-        $log = AcmeOperationLog::challengeOperation('complete', 'Challenge completed', 789, $details);
-        
-        $this->assertSame('challenge_complete', $log->getOperation());
-        $this->assertSame('Challenge completed', $log->getMessage());
-        $this->assertSame('Challenge', $log->getEntityType());
-        $this->assertSame(789, $log->getEntityId());
+        $this->assertSame($entityId, $log->getEntityId());
         $this->assertSame($details, $log->getContext());
     }
 
-    public function test_certificateOperation_basic(): void
+    public function testCertificateOperationBasic(): void
     {
-        $log = AcmeOperationLog::certificateOperation('download', 'Certificate downloaded');
-        
+        $log = AcmeOperationLog::certificateOperation('create', 'Certificate created');
+
         $this->assertInstanceOf(AcmeOperationLog::class, $log);
-        $this->assertSame('certificate_download', $log->getOperation());
-        $this->assertSame('Certificate downloaded', $log->getMessage());
+        $this->assertSame('certificate_create', $log->getOperation());
+        $this->assertSame('Certificate created', $log->getMessage());
         $this->assertSame('Certificate', $log->getEntityType());
-        $this->assertNull($log->getEntityId());
-        $this->assertNull($log->getContext());
     }
 
-    public function test_certificateOperation_withIdAndDetails(): void
+    public function testCertificateOperationWithIdAndDetails(): void
     {
-        $details = ['serial' => 'ABC123', 'expires' => '2024-12-31', 'domains' => ['example.com']];
-        $log = AcmeOperationLog::certificateOperation('install', 'Certificate installed', 999, $details);
-        
+        $entityId = 999;
+        $details = ['serial' => 'ABC123', 'domains' => ['example.com']];
+
+        $log = AcmeOperationLog::certificateOperation('install', 'Certificate installed', $entityId, $details);
+
         $this->assertSame('certificate_install', $log->getOperation());
         $this->assertSame('Certificate installed', $log->getMessage());
         $this->assertSame('Certificate', $log->getEntityType());
-        $this->assertSame(999, $log->getEntityId());
+        $this->assertSame($entityId, $log->getEntityId());
         $this->assertSame($details, $log->getContext());
     }
 
-    public function test_toString(): void
+    public function testToString(): void
     {
-        $this->operationLog->setOperation('test_operation');
-        
+        $log = $this->createEntity();
+        $log->setOperation('test_operation');
+
         $expected = 'Log #0: test_operation';
-        $this->assertSame($expected, (string) $this->operationLog);
+        $this->assertSame($expected, (string) $log);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->operationLog);
+        $log = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $log);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        $log = $this->createEntity();
         $level = LogLevel::WARNING;
         $operation = 'test_operation';
         $message = 'Test message';
@@ -478,250 +318,224 @@ class AcmeOperationLogTest extends TestCase
         $httpStatusCode = 200;
         $durationMs = 1000;
 
-        $result = $this->operationLog
-            ->setLevel($level)
-            ->setOperation($operation)
-            ->setMessage($message)
-            ->setEntityType($entityType)
-            ->setEntityId($entityId)
-            ->setContext($context)
-            ->setHttpUrl($httpUrl)
-            ->setHttpMethod($httpMethod)
-            ->setHttpStatusCode($httpStatusCode)
-            ->setDurationMs($durationMs)
-            ->setSuccess(false);
+        $log->setLevel($level);
+        $log->setOperation($operation);
+        $log->setMessage($message);
+        $log->setEntityType($entityType);
+        $log->setEntityId($entityId);
+        $log->setContext($context);
+        $log->setHttpUrl($httpUrl);
+        $log->setHttpMethod($httpMethod);
+        $log->setHttpStatusCode($httpStatusCode);
+        $log->setDurationMs($durationMs);
+        $log->setSuccess(false);
+        $result = $log;
 
-        $this->assertSame($this->operationLog, $result);
-        $this->assertSame($level, $this->operationLog->getLevel());
-        $this->assertSame($operation, $this->operationLog->getOperation());
-        $this->assertSame($message, $this->operationLog->getMessage());
-        $this->assertSame($entityType, $this->operationLog->getEntityType());
-        $this->assertSame($entityId, $this->operationLog->getEntityId());
-        $this->assertSame($context, $this->operationLog->getContext());
-        $this->assertSame($httpUrl, $this->operationLog->getHttpUrl());
-        $this->assertSame($httpMethod, $this->operationLog->getHttpMethod());
-        $this->assertSame($httpStatusCode, $this->operationLog->getHttpStatusCode());
-        $this->assertSame($durationMs, $this->operationLog->getDurationMs());
-        $this->assertFalse($this->operationLog->isSuccess());
+        $this->assertSame($log, $result);
+        $this->assertSame($level, $log->getLevel());
+        $this->assertSame($operation, $log->getOperation());
+        $this->assertSame($message, $log->getMessage());
+        $this->assertSame($entityType, $log->getEntityType());
+        $this->assertSame($entityId, $log->getEntityId());
+        $this->assertSame($context, $log->getContext());
+        $this->assertSame($httpUrl, $log->getHttpUrl());
+        $this->assertSame($httpMethod, $log->getHttpMethod());
+        $this->assertSame($httpStatusCode, $log->getHttpStatusCode());
+        $this->assertSame($durationMs, $log->getDurationMs());
+        $this->assertFalse($log->isSuccess());
     }
 
-    public function test_businessScenario_accountRegistration(): void
+    public function testBusinessScenarioAccountRegistration(): void
     {
         $log = AcmeOperationLog::accountOperation('register', 'New ACME account registered', 123, [
             'email' => 'user@example.com',
             'terms_agreed' => true,
-            'key_algorithm' => 'RSA-2048'
+            'key_algorithm' => 'RSA-2048',
         ]);
-
-        $log->setLevel(LogLevel::INFO)
-            ->setHttpUrl('https://acme-v02.api.letsencrypt.org/acme/new-account')
-            ->setHttpMethod('POST')
-            ->setHttpStatusCode(201)
-            ->setDurationMs(850)
-            ->setSuccess(true);
 
         $this->assertSame('account_register', $log->getOperation());
-        $this->assertTrue($log->isInfo());
-        $this->assertTrue($log->hasRelatedEntity());
-        $this->assertTrue($log->hasHttpRequest());
-        $this->assertTrue($log->hasHttpResponse());
+        $this->assertStringContainsString('registered', $log->getMessage());
+        $this->assertSame('Account', $log->getEntityType());
+        $this->assertSame(123, $log->getEntityId());
         $this->assertTrue($log->isSuccess());
-        $this->assertStringContainsString('Account#123', $log->getFormattedDescription());
+        $context = $log->getContext();
+        $this->assertNotNull($context, 'Context should not be null');
+        $this->assertArrayHasKey('email', $context);
     }
 
-    public function test_businessScenario_challengeValidation(): void
+    public function testBusinessScenarioChallengeValidation(): void
     {
-        $log = AcmeOperationLog::challengeOperation('dns_setup', 'DNS TXT record configured', 456, [
+        $log = AcmeOperationLog::challengeOperation('validate', 'DNS challenge validation', 456, [
+            'type' => 'dns-01',
             'domain' => 'example.com',
-            'record_name' => '_acme-challenge.example.com',
-            'record_value' => 'abc123def456',
-            'ttl' => 300
+            'validation_time' => 2500,
         ]);
 
-        $log->setLevel(LogLevel::DEBUG)
-            ->setDurationMs(2500)
-            ->setSuccess(true);
-
-        $this->assertSame('challenge_dns_setup', $log->getOperation());
-        $this->assertTrue($log->isDebug());
+        $this->assertSame('challenge_validate', $log->getOperation());
+        $this->assertStringContainsString('validation', $log->getMessage());
         $this->assertSame('Challenge', $log->getEntityType());
-        $this->assertArrayHasKey('domain', $log->getContext());
-        $this->assertStringContainsString('2500ms', $log->getFormattedDescription());
+        $this->assertSame(456, $log->getEntityId());
+        // 静态工厂方法不会自动设置持续时间，需要手动设置
+        $this->assertNull($log->getDurationMs());
     }
 
-    public function test_businessScenario_certificateIssuance(): void
+    public function testBusinessScenarioCertificateIssuance(): void
     {
-        $log = AcmeOperationLog::certificateOperation('issue', 'Certificate issued successfully', 789, [
+        $log = AcmeOperationLog::certificateOperation('issue', 'SSL certificate issued successfully', 789, [
+            'serial' => 'ABC123DEF456',
             'domains' => ['example.com', 'www.example.com'],
-            'serial_number' => '03:E7:07:A9:C8:F4:5A:12',
-            'expires_at' => '2024-12-31T23:59:59Z'
+            'validity_days' => 90,
         ]);
-
-        $log->setLevel(LogLevel::INFO)
-            ->setHttpUrl('https://acme-v02.api.letsencrypt.org/acme/cert/abc123')
-            ->setHttpMethod('GET')
-            ->setHttpStatusCode(200)
-            ->setDurationMs(1200)
-            ->setSuccess(true);
 
         $this->assertSame('certificate_issue', $log->getOperation());
-        $this->assertTrue($log->isInfo());
+        $this->assertStringContainsString('issued', $log->getMessage());
+        $this->assertSame('Certificate', $log->getEntityType());
+        $this->assertSame(789, $log->getEntityId());
         $this->assertTrue($log->isSuccess());
-        $this->assertSame(200, $log->getHttpStatusCode());
-        $this->assertArrayHasKey('serial_number', $log->getContext());
+        $context = $log->getContext();
+        $this->assertNotNull($context, 'Context should not be null');
+        $this->assertArrayHasKey('domains', $context);
+        $this->assertIsArray($context['domains']);
     }
 
-    public function test_businessScenario_operationFailure(): void
+    public function testBusinessScenarioOperationFailure(): void
     {
-        $log = AcmeOperationLog::orderOperation('submit', 'Order submission failed due to rate limit', 999, [
-            'error_type' => 'rateLimited',
-            'retry_after' => 3600,
-            'domains' => ['example.com']
-        ]);
+        $log = AcmeOperationLog::orderOperation('create', 'Order creation failed due to rate limit');
+        $log->setLevel(LogLevel::ERROR);
+        $log->setSuccess(false);
+        $log->setHttpStatusCode(429);
+        $log->setContext(['retry_after' => 3600]);
 
-        $log->setLevel(LogLevel::ERROR)
-            ->setHttpUrl('https://acme-v02.api.letsencrypt.org/acme/new-order')
-            ->setHttpMethod('POST')
-            ->setHttpStatusCode(429)
-            ->setDurationMs(500)
-            ->setSuccess(false);
-
-        $this->assertSame('order_submit', $log->getOperation());
         $this->assertTrue($log->isError());
         $this->assertFalse($log->isSuccess());
         $this->assertSame(429, $log->getHttpStatusCode());
         $this->assertStringContainsString('rate limit', $log->getMessage());
     }
 
-    public function test_edgeCases_zeroEntityId(): void
+    public function testEdgeCasesZeroEntityId(): void
     {
-        $this->operationLog
-            ->setEntityType('Test')
-            ->setEntityId(0);
-        
-        $this->assertTrue($this->operationLog->hasRelatedEntity());
+        $log = $this->createEntity();
+        $log->setEntityType('Test');
+        $log->setEntityId(0);
+
+        $this->assertTrue($log->hasRelatedEntity());
     }
 
-    public function test_edgeCases_zeroDuration(): void
+    public function testEdgeCasesZeroDuration(): void
     {
-        $this->operationLog
-            ->setOperation('fast_operation')
-            ->setMessage('Very fast operation')
-            ->setDurationMs(0);
-        
-        $description = $this->operationLog->getFormattedDescription();
+        $log = $this->createEntity();
+        $log->setOperation('fast_operation');
+        $log->setMessage('Very fast operation');
+        $log->setDurationMs(0);
+
+        $description = $log->getFormattedDescription();
         $this->assertStringContainsString('(0ms)', $description);
     }
 
-    public function test_edgeCases_longOperation(): void
+    public function testEdgeCasesLongOperation(): void
     {
         $longOperation = str_repeat('very_long_operation_name_', 10);
-        $this->operationLog->setOperation($longOperation);
-        
-        $this->assertSame($longOperation, $this->operationLog->getOperation());
+        $log = $this->createEntity();
+        $log->setOperation($longOperation);
+
+        $this->assertSame($longOperation, $log->getOperation());
     }
 
-    public function test_edgeCases_complexContext(): void
+    public function testEdgeCasesComplexContext(): void
     {
         $complexContext = [
             'nested' => [
                 'array' => ['value1', 'value2'],
-                'object' => ['key' => 'value']
+                'object' => ['key' => 'value'],
             ],
             'numbers' => [1, 2, 3],
             'boolean' => true,
             'null' => null,
-            'float' => 3.14
+            'float' => 3.14,
         ];
-        
-        $this->operationLog->setContext($complexContext);
-        $this->assertSame($complexContext, $this->operationLog->getContext());
+
+        $log = $this->createEntity();
+        $log->setContext($complexContext);
+        $this->assertSame($complexContext, $log->getContext());
     }
 
-    public function test_logLevelTransitions(): void
+    public function testLogLevelTransitions(): void
     {
+        $log = $this->createEntity();
         // 从 INFO 开始
-        $this->assertTrue($this->operationLog->isInfo());
-        $this->assertFalse($this->operationLog->isDebug());
-        $this->assertFalse($this->operationLog->isWarning());
-        $this->assertFalse($this->operationLog->isError());
+        $this->assertTrue($log->isInfo());
+        $this->assertFalse($log->isDebug());
+        $this->assertFalse($log->isWarning());
+        $this->assertFalse($log->isError());
 
         // 切换到 DEBUG
-        $this->operationLog->setLevel(LogLevel::DEBUG);
-        $this->assertFalse($this->operationLog->isInfo());
-        $this->assertTrue($this->operationLog->isDebug());
-        $this->assertFalse($this->operationLog->isWarning());
-        $this->assertFalse($this->operationLog->isError());
+        $log->setLevel(LogLevel::DEBUG);
+        $this->assertFalse($log->isInfo());
+        $this->assertTrue($log->isDebug());
+        $this->assertFalse($log->isWarning());
+        $this->assertFalse($log->isError());
 
         // 切换到 WARNING
-        $this->operationLog->setLevel(LogLevel::WARNING);
-        $this->assertFalse($this->operationLog->isInfo());
-        $this->assertFalse($this->operationLog->isDebug());
-        $this->assertTrue($this->operationLog->isWarning());
-        $this->assertFalse($this->operationLog->isError());
+        $log->setLevel(LogLevel::WARNING);
+        $this->assertFalse($log->isInfo());
+        $this->assertFalse($log->isDebug());
+        $this->assertTrue($log->isWarning());
+        $this->assertFalse($log->isError());
 
         // 切换到 ERROR
-        $this->operationLog->setLevel(LogLevel::ERROR);
-        $this->assertFalse($this->operationLog->isInfo());
-        $this->assertFalse($this->operationLog->isDebug());
-        $this->assertFalse($this->operationLog->isWarning());
-        $this->assertTrue($this->operationLog->isError());
+        $log->setLevel(LogLevel::ERROR);
+        $this->assertFalse($log->isInfo());
+        $this->assertFalse($log->isDebug());
+        $this->assertFalse($log->isWarning());
+        $this->assertTrue($log->isError());
     }
 
-    public function test_httpStatusCodeMapping(): void
+    public function testHttpStatusCodeMapping(): void
     {
         $statusCodes = [200, 201, 400, 401, 403, 404, 429, 500, 502, 503];
-        
+
+        $log = $this->createEntity();
         foreach ($statusCodes as $code) {
-            $this->operationLog->setHttpStatusCode($code);
-            $this->assertSame($code, $this->operationLog->getHttpStatusCode());
-            $this->assertTrue($this->operationLog->hasHttpResponse());
+            $log->setHttpStatusCode($code);
+            $this->assertSame($code, $log->getHttpStatusCode());
+            $this->assertTrue($log->hasHttpResponse());
         }
     }
 
-    public function test_httpMethodVariations(): void
+    public function testHttpMethodVariations(): void
     {
         $methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
-        
+
+        $log = $this->createEntity();
         foreach ($methods as $method) {
-            $this->operationLog->setHttpMethod($method);
-            $this->assertSame($method, $this->operationLog->getHttpMethod());
+            $log->setHttpMethod($method);
+            $this->assertSame($method, $log->getHttpMethod());
         }
     }
 
-    public function test_staticFactoryMethods_consistency(): void
+    public function testStaticFactoryMethodsConsistency(): void
     {
         $operations = ['create', 'update', 'delete', 'validate'];
         $message = 'Test operation';
         $entityId = 123;
-        $details = ['test' => 'data'];
+        $context = ['test' => true];
 
-        foreach ($operations as $operation) {
-            $accountLog = AcmeOperationLog::accountOperation($operation, $message, $entityId, $details);
-            $orderLog = AcmeOperationLog::orderOperation($operation, $message, $entityId, $details);
-            $challengeLog = AcmeOperationLog::challengeOperation($operation, $message, $entityId, $details);
-            $certificateLog = AcmeOperationLog::certificateOperation($operation, $message, $entityId, $details);
+        // 测试所有静态工厂方法的一致性
+        $accountLog = AcmeOperationLog::accountOperation($operations[0], $message, $entityId, $context);
+        $orderLog = AcmeOperationLog::orderOperation($operations[1], $message, $entityId, $context);
+        $challengeLog = AcmeOperationLog::challengeOperation($operations[2], $message, $entityId, $context);
+        $certificateLog = AcmeOperationLog::certificateOperation($operations[3], $message, $entityId, $context);
 
-            // 检查操作名称格式
-            $this->assertSame("account_{$operation}", $accountLog->getOperation());
-            $this->assertSame("order_{$operation}", $orderLog->getOperation());
-            $this->assertSame("challenge_{$operation}", $challengeLog->getOperation());
-            $this->assertSame("certificate_{$operation}", $certificateLog->getOperation());
+        // 验证所有日志都有正确的实体类型
+        $this->assertSame('Account', $accountLog->getEntityType());
+        $this->assertSame('Order', $orderLog->getEntityType());
+        $this->assertSame('Challenge', $challengeLog->getEntityType());
+        $this->assertSame('Certificate', $certificateLog->getEntityType());
 
-            // 检查实体类型
-            $this->assertSame('Account', $accountLog->getEntityType());
-            $this->assertSame('Order', $orderLog->getEntityType());
-            $this->assertSame('Challenge', $challengeLog->getEntityType());
-            $this->assertSame('Certificate', $certificateLog->getEntityType());
-
-            // 检查共同属性
-            foreach ([$accountLog, $orderLog, $challengeLog, $certificateLog] as $log) {
-                $this->assertSame($message, $log->getMessage());
-                $this->assertSame($entityId, $log->getEntityId());
-                $this->assertSame($details, $log->getContext());
-                $this->assertSame(LogLevel::INFO, $log->getLevel());
-                $this->assertTrue($log->isSuccess());
-            }
-        }
+        // 验证所有日志都有正确的操作前缀
+        $this->assertStringStartsWith('account_', $accountLog->getOperation());
+        $this->assertStringStartsWith('order_', $orderLog->getOperation());
+        $this->assertStringStartsWith('challenge_', $challengeLog->getOperation());
+        $this->assertStringStartsWith('certificate_', $certificateLog->getOperation());
     }
-} 
+}

@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\ACMEClientBundle\Enum\AuthorizationStatus;
 use Tourze\ACMEClientBundle\Repository\AuthorizationRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -20,8 +21,6 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  */
 #[ORM\Entity(repositoryClass: AuthorizationRepository::class)]
 #[ORM\Table(name: 'acme_authorizations', options: ['comment' => 'ACME 授权表，存储域名授权信息'])]
-#[ORM\Index(columns: ['status'], name: 'idx_authorization_status')]
-#[ORM\Index(columns: ['expires_time'], name: 'idx_authorization_expires')]
 class Authorization implements \Stringable
 {
     use TimestampableAware;
@@ -29,39 +28,47 @@ class Authorization implements \Stringable
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore-line property.unusedType (Doctrine auto-assigns after persist)
 
     /**
      * 关联的订单
      */
-    #[ORM\ManyToOne(targetEntity: Order::class, inversedBy: 'orderAuthorizations')]
+    #[ORM\ManyToOne(targetEntity: Order::class, inversedBy: 'orderAuthorizations', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
-    #[IndexColumn]
+    #[Assert\NotNull]
     private ?Order $order = null;
 
     /**
      * 关联的标识符
      */
-    #[ORM\ManyToOne(targetEntity: Identifier::class)]
+    #[ORM\ManyToOne(targetEntity: Identifier::class, cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
-    #[IndexColumn]
+    #[Assert\NotNull]
     private ?Identifier $identifier = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, options: ['comment' => '授权在 ACME 服务器上的 URL'])]
+    #[Assert\NotBlank]
+    #[Assert\Url]
+    #[Assert\Length(max: 500)]
     private string $authorizationUrl;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: AuthorizationStatus::class, options: ['comment' => '授权状态'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Choice(callback: [AuthorizationStatus::class, 'cases'], message: '请选择有效的授权状态')]
     private AuthorizationStatus $status = AuthorizationStatus::PENDING;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '授权过期时间'])]
     #[IndexColumn]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '过期时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $expiresTime = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '授权是否为通配符'])]
+    #[Assert\Type(type: 'bool', message: '通配符状态必须是布尔值')]
     private bool $wildcard = false;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '授权是否有效'])]
+    #[Assert\Type(type: 'bool', message: '有效状态必须是布尔值')]
     private bool $valid = false;
 
     /**
@@ -92,10 +99,9 @@ class Authorization implements \Stringable
         return $this->order;
     }
 
-    public function setOrder(?Order $order): static
+    public function setOrder(?Order $order): void
     {
         $this->order = $order;
-        return $this;
     }
 
     public function getIdentifier(): ?Identifier
@@ -103,10 +109,9 @@ class Authorization implements \Stringable
         return $this->identifier;
     }
 
-    public function setIdentifier(?Identifier $identifier): static
+    public function setIdentifier(?Identifier $identifier): void
     {
         $this->identifier = $identifier;
-        return $this;
     }
 
     public function getAuthorizationUrl(): string
@@ -114,10 +119,9 @@ class Authorization implements \Stringable
         return $this->authorizationUrl;
     }
 
-    public function setAuthorizationUrl(string $authorizationUrl): static
+    public function setAuthorizationUrl(string $authorizationUrl): void
     {
         $this->authorizationUrl = $authorizationUrl;
-        return $this;
     }
 
     public function getStatus(): AuthorizationStatus
@@ -125,11 +129,10 @@ class Authorization implements \Stringable
         return $this->status;
     }
 
-    public function setStatus(AuthorizationStatus $status): static
+    public function setStatus(AuthorizationStatus $status): void
     {
         $this->status = $status;
-        $this->valid = ($status === AuthorizationStatus::VALID);
-        return $this;
+        $this->valid = (AuthorizationStatus::VALID === $status);
     }
 
     public function getExpiresTime(): ?\DateTimeImmutable
@@ -137,10 +140,9 @@ class Authorization implements \Stringable
         return $this->expiresTime;
     }
 
-    public function setExpiresTime(?\DateTimeImmutable $expiresTime): static
+    public function setExpiresTime(?\DateTimeImmutable $expiresTime): void
     {
         $this->expiresTime = $expiresTime;
-        return $this;
     }
 
     public function isWildcard(): bool
@@ -148,10 +150,9 @@ class Authorization implements \Stringable
         return $this->wildcard;
     }
 
-    public function setWildcard(bool $wildcard): static
+    public function setWildcard(bool $wildcard): void
     {
         $this->wildcard = $wildcard;
-        return $this;
     }
 
     public function isValid(): bool
@@ -159,10 +160,9 @@ class Authorization implements \Stringable
         return $this->valid;
     }
 
-    public function setValid(bool $valid): static
+    public function setValid(bool $valid): void
     {
         $this->valid = $valid;
-        return $this;
     }
 
     /**
@@ -173,7 +173,7 @@ class Authorization implements \Stringable
         return $this->challenges;
     }
 
-    public function addChallenge(Challenge $challenge): static
+    public function addChallenge(Challenge $challenge): self
     {
         if (!$this->challenges->contains($challenge)) {
             $this->challenges->add($challenge);
@@ -183,7 +183,7 @@ class Authorization implements \Stringable
         return $this;
     }
 
-    public function removeChallenge(Challenge $challenge): static
+    public function removeChallenge(Challenge $challenge): self
     {
         if ($this->challenges->removeElement($challenge)) {
             if ($challenge->getAuthorization() === $this) {
@@ -196,23 +196,23 @@ class Authorization implements \Stringable
 
     public function isPending(): bool
     {
-        return $this->status === AuthorizationStatus::PENDING;
+        return AuthorizationStatus::PENDING === $this->status;
     }
 
     public function isExpired(): bool
     {
-        return $this->status === AuthorizationStatus::EXPIRED ||
-            ($this->expiresTime !== null && $this->expiresTime < new \DateTimeImmutable());
+        return AuthorizationStatus::EXPIRED === $this->status
+            || (null !== $this->expiresTime && $this->expiresTime < new \DateTimeImmutable());
     }
 
     public function isRevoked(): bool
     {
-        return $this->status === AuthorizationStatus::REVOKED;
+        return AuthorizationStatus::REVOKED === $this->status;
     }
 
     public function isInvalid(): bool
     {
-        return $this->status === AuthorizationStatus::INVALID;
+        return AuthorizationStatus::INVALID === $this->status;
     }
 
     /**

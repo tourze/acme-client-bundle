@@ -6,6 +6,7 @@ namespace Tourze\ACMEClientBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\ACMEClientBundle\Enum\ChallengeStatus;
 use Tourze\ACMEClientBundle\Enum\ChallengeType;
 use Tourze\ACMEClientBundle\Repository\ChallengeRepository;
@@ -19,9 +20,6 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  */
 #[ORM\Entity(repositoryClass: ChallengeRepository::class)]
 #[ORM\Table(name: 'acme_challenges', options: ['comment' => 'ACME 质询表，存储质询信息'])]
-#[ORM\Index(columns: ['type'], name: 'idx_challenge_type')]
-#[ORM\Index(columns: ['status'], name: 'idx_challenge_status')]
-#[ORM\Index(columns: ['token'], name: 'idx_challenge_token')]
 class Challenge implements \Stringable
 {
     use TimestampableAware;
@@ -29,44 +27,64 @@ class Challenge implements \Stringable
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore-line property.unusedType (Doctrine auto-assigns after persist)
 
     #[ORM\ManyToOne(targetEntity: Authorization::class, inversedBy: 'challenges')]
     #[ORM\JoinColumn(nullable: false)]
-    #[IndexColumn]
+    #[Assert\NotNull]
     private ?Authorization $authorization = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, options: ['comment' => '质询在 ACME 服务器上的 URL'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Url]
+    #[Assert\Length(max: 500)]
     private string $challengeUrl;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: ChallengeType::class, options: ['comment' => '质询类型'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Choice(callback: [ChallengeType::class, 'cases'], message: '请选择有效的质询类型')]
     private ChallengeType $type = ChallengeType::DNS_01;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: ChallengeStatus::class, options: ['comment' => '质询状态'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Choice(callback: [ChallengeStatus::class, 'cases'], message: '请选择有效的质询状态')]
     private ChallengeStatus $status = ChallengeStatus::PENDING;
 
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '质询 token'])]
+    #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     private string $token;
 
     #[ORM\Column(type: Types::STRING, length: 500, options: ['comment' => '质询响应内容'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 500)]
     private string $keyAuthorization;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => 'DNS 记录名称'])]
+    #[Assert\Length(max: 255)]
     private ?string $dnsRecordName = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => 'DNS 记录值'])]
+    #[Assert\Length(max: 500)]
     private ?string $dnsRecordValue = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '质询验证时间'])]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '验证时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $validatedTime = null;
 
+    /**
+     * @var array<string, mixed>|null
+     */
     #[ORM\Column(type: Types::JSON, nullable: true, options: ['comment' => '质询错误信息'])]
+    #[Assert\Type(type: 'array', message: '错误信息必须是数组格式')]
     private ?array $error = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '质询是否有效'])]
+    #[Assert\Type(type: 'bool', message: '有效状态必须是布尔值')]
     private bool $valid = false;
 
     public function __toString(): string
@@ -84,10 +102,9 @@ class Challenge implements \Stringable
         return $this->authorization;
     }
 
-    public function setAuthorization(?Authorization $authorization): static
+    public function setAuthorization(?Authorization $authorization): void
     {
         $this->authorization = $authorization;
-        return $this;
     }
 
     public function getChallengeUrl(): string
@@ -95,10 +112,9 @@ class Challenge implements \Stringable
         return $this->challengeUrl;
     }
 
-    public function setChallengeUrl(string $challengeUrl): static
+    public function setChallengeUrl(string $challengeUrl): void
     {
         $this->challengeUrl = $challengeUrl;
-        return $this;
     }
 
     public function getType(): ChallengeType
@@ -106,10 +122,9 @@ class Challenge implements \Stringable
         return $this->type;
     }
 
-    public function setType(ChallengeType $type): static
+    public function setType(ChallengeType $type): void
     {
         $this->type = $type;
-        return $this;
     }
 
     public function getStatus(): ChallengeStatus
@@ -117,11 +132,10 @@ class Challenge implements \Stringable
         return $this->status;
     }
 
-    public function setStatus(ChallengeStatus $status): static
+    public function setStatus(ChallengeStatus $status): void
     {
         $this->status = $status;
-        $this->valid = ($status === ChallengeStatus::VALID);
-        return $this;
+        $this->valid = (ChallengeStatus::VALID === $status);
     }
 
     public function getToken(): string
@@ -129,10 +143,9 @@ class Challenge implements \Stringable
         return $this->token;
     }
 
-    public function setToken(string $token): static
+    public function setToken(string $token): void
     {
         $this->token = $token;
-        return $this;
     }
 
     public function getKeyAuthorization(): string
@@ -140,10 +153,9 @@ class Challenge implements \Stringable
         return $this->keyAuthorization;
     }
 
-    public function setKeyAuthorization(string $keyAuthorization): static
+    public function setKeyAuthorization(string $keyAuthorization): void
     {
         $this->keyAuthorization = $keyAuthorization;
-        return $this;
     }
 
     public function getDnsRecordName(): ?string
@@ -151,10 +163,9 @@ class Challenge implements \Stringable
         return $this->dnsRecordName;
     }
 
-    public function setDnsRecordName(?string $dnsRecordName): static
+    public function setDnsRecordName(?string $dnsRecordName): void
     {
         $this->dnsRecordName = $dnsRecordName;
-        return $this;
     }
 
     public function getDnsRecordValue(): ?string
@@ -162,10 +173,9 @@ class Challenge implements \Stringable
         return $this->dnsRecordValue;
     }
 
-    public function setDnsRecordValue(?string $dnsRecordValue): static
+    public function setDnsRecordValue(?string $dnsRecordValue): void
     {
         $this->dnsRecordValue = $dnsRecordValue;
-        return $this;
     }
 
     public function getValidatedTime(): ?\DateTimeImmutable
@@ -173,21 +183,25 @@ class Challenge implements \Stringable
         return $this->validatedTime;
     }
 
-    public function setValidatedTime(?\DateTimeImmutable $validatedTime): static
+    public function setValidatedTime(?\DateTimeImmutable $validatedTime): void
     {
         $this->validatedTime = $validatedTime;
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getError(): ?array
     {
         return $this->error;
     }
 
-    public function setError(?array $error): static
+    /**
+     * @param array<string, mixed>|null $error
+     */
+    public function setError(?array $error): void
     {
         $this->error = $error;
-        return $this;
     }
 
     public function isValid(): bool
@@ -195,10 +209,9 @@ class Challenge implements \Stringable
         return $this->valid;
     }
 
-    public function setValid(bool $valid): static
+    public function setValid(bool $valid): void
     {
         $this->valid = $valid;
-        return $this;
     }
 
     /**
@@ -206,7 +219,7 @@ class Challenge implements \Stringable
      */
     public function isInvalid(): bool
     {
-        return $this->status === ChallengeStatus::INVALID;
+        return ChallengeStatus::INVALID === $this->status;
     }
 
     /**
@@ -214,7 +227,7 @@ class Challenge implements \Stringable
      */
     public function isProcessing(): bool
     {
-        return $this->status === ChallengeStatus::PROCESSING;
+        return ChallengeStatus::PROCESSING === $this->status;
     }
 
     /**
@@ -233,10 +246,19 @@ class Challenge implements \Stringable
      */
     public function getFullDnsRecordName(): string
     {
-        if ($this->dnsRecordName === null) {
+        if (null === $this->dnsRecordName) {
             return '';
         }
+
         return $this->dnsRecordName;
+    }
+
+    /**
+     * setChallengeUrl的别名，用于保持向后兼容性
+     */
+    public function setUrl(string $url): void
+    {
+        $this->setChallengeUrl($url);
     }
 
     /**
@@ -249,6 +271,7 @@ class Challenge implements \Stringable
         }
 
         $hash = hash('sha256', $this->keyAuthorization, true);
+
         return rtrim(strtr(base64_encode($hash), '+/', '-_'), '=');
     }
 }

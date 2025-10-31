@@ -4,289 +4,146 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Authorization;
 use Tourze\ACMEClientBundle\Entity\Challenge;
 use Tourze\ACMEClientBundle\Enum\ChallengeStatus;
 use Tourze\ACMEClientBundle\Enum\ChallengeType;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Challenge 实体测试类
+ *
+ * @internal
  */
-class ChallengeTest extends TestCase
+#[CoversClass(Challenge::class)]
+final class ChallengeTest extends AbstractEntityTestCase
 {
-    private Challenge $challenge;
-
-    protected function setUp(): void
+    public function testConstructorDefaultValues(): void
     {
-        $this->challenge = new Challenge();
+        $challenge = $this->createEntity();
+        $this->assertNull($challenge->getId());
+        $this->assertNull($challenge->getAuthorization());
+        $this->assertSame(ChallengeType::DNS_01, $challenge->getType());
+        $this->assertSame(ChallengeStatus::PENDING, $challenge->getStatus());
+        $this->assertNull($challenge->getDnsRecordName());
+        $this->assertNull($challenge->getDnsRecordValue());
+        $this->assertNull($challenge->getValidatedTime());
+        $this->assertNull($challenge->getError());
+        $this->assertFalse($challenge->isValid());
     }
 
-    public function test_constructor_defaultValues(): void
+    public function testStatusAutomaticValidFlag(): void
     {
-        $this->assertNull($this->challenge->getId());
-        $this->assertNull($this->challenge->getAuthorization());
-        $this->assertSame(ChallengeType::DNS_01, $this->challenge->getType());
-        $this->assertSame(ChallengeStatus::PENDING, $this->challenge->getStatus());
-        $this->assertNull($this->challenge->getDnsRecordName());
-        $this->assertNull($this->challenge->getDnsRecordValue());
-        $this->assertNull($this->challenge->getValidatedTime());
-        $this->assertNull($this->challenge->getError());
-        $this->assertFalse($this->challenge->isValid());
-    }
+        $challenge = $this->createEntity();
 
-    public function test_authorization_getterSetter(): void
-    {
-        $authorization = $this->createMock(Authorization::class);
-        $result = $this->challenge->setAuthorization($authorization);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($authorization, $this->challenge->getAuthorization());
-    }
-
-    public function test_authorization_setToNull(): void
-    {
-        $authorization = $this->createMock(Authorization::class);
-        $this->challenge->setAuthorization($authorization);
-
-        $this->challenge->setAuthorization(null);
-        $this->assertNull($this->challenge->getAuthorization());
-    }
-
-    public function test_challengeUrl_getterSetter(): void
-    {
-        $url = 'https://acme-v02.api.letsencrypt.org/acme/chall-v3/123456/abc';
-        $result = $this->challenge->setChallengeUrl($url);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($url, $this->challenge->getChallengeUrl());
-    }
-
-    public function test_type_getterSetter(): void
-    {
-        $this->assertSame(ChallengeType::DNS_01, $this->challenge->getType());
-
-        $result = $this->challenge->setType(ChallengeType::DNS_01);
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame(ChallengeType::DNS_01, $this->challenge->getType());
-    }
-
-    public function test_status_getterSetter(): void
-    {
-        $this->assertSame(ChallengeStatus::PENDING, $this->challenge->getStatus());
-
-        $result = $this->challenge->setStatus(ChallengeStatus::VALID);
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame(ChallengeStatus::VALID, $this->challenge->getStatus());
-    }
-
-    public function test_status_automaticValidFlag(): void
-    {
         // 设置为 VALID 时自动设置 valid 标志为 true
-        $this->challenge->setStatus(ChallengeStatus::VALID);
-        $this->assertTrue($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::VALID);
+        $this->assertTrue($challenge->isValid());
 
         // 设置为其他状态时 valid 标志为 false
-        $this->challenge->setStatus(ChallengeStatus::PENDING);
-        $this->assertFalse($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::PENDING);
+        $this->assertFalse($challenge->isValid());
 
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertFalse($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertFalse($challenge->isValid());
 
-        $this->challenge->setStatus(ChallengeStatus::INVALID);
-        $this->assertFalse($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::INVALID);
+        $this->assertFalse($challenge->isValid());
     }
 
-    public function test_token_getterSetter(): void
+    public function testIsInvalid(): void
     {
-        $token = 'test_token_123456789';
-        $result = $this->challenge->setToken($token);
+        $challenge = $this->createEntity();
+        $this->assertFalse($challenge->isInvalid());
 
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($token, $this->challenge->getToken());
+        $challenge->setStatus(ChallengeStatus::INVALID);
+        $this->assertTrue($challenge->isInvalid());
+
+        $challenge->setStatus(ChallengeStatus::VALID);
+        $this->assertFalse($challenge->isInvalid());
     }
 
-    public function test_keyAuthorization_getterSetter(): void
+    public function testIsProcessing(): void
     {
-        $keyAuth = 'test_token_123456789.test_key_auth_content';
-        $result = $this->challenge->setKeyAuthorization($keyAuth);
+        $challenge = $this->createEntity();
+        $this->assertFalse($challenge->isProcessing());
 
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($keyAuth, $this->challenge->getKeyAuthorization());
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertTrue($challenge->isProcessing());
+
+        $challenge->setStatus(ChallengeStatus::PENDING);
+        $this->assertFalse($challenge->isProcessing());
     }
 
-    public function test_dnsRecordName_getterSetter(): void
+    public function testIsDns01(): void
     {
-        $this->assertNull($this->challenge->getDnsRecordName());
+        $challenge = $this->createEntity();
 
-        $recordName = '_acme-challenge.example.com';
-        $result = $this->challenge->setDnsRecordName($recordName);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($recordName, $this->challenge->getDnsRecordName());
-    }
-
-    public function test_dnsRecordName_setToNull(): void
-    {
-        $this->challenge->setDnsRecordName('_acme-challenge.example.com');
-        $this->challenge->setDnsRecordName(null);
-
-        $this->assertNull($this->challenge->getDnsRecordName());
-    }
-
-    public function test_dnsRecordValue_getterSetter(): void
-    {
-        $this->assertNull($this->challenge->getDnsRecordValue());
-
-        $recordValue = 'test_dns_record_value_base64';
-        $result = $this->challenge->setDnsRecordValue($recordValue);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($recordValue, $this->challenge->getDnsRecordValue());
-    }
-
-    public function test_dnsRecordValue_setToNull(): void
-    {
-        $this->challenge->setDnsRecordValue('test_value');
-        $this->challenge->setDnsRecordValue(null);
-
-        $this->assertNull($this->challenge->getDnsRecordValue());
-    }
-
-    public function test_validatedTime_getterSetter(): void
-    {
-        $this->assertNull($this->challenge->getValidatedTime());
-
-        $validatedTime = new \DateTimeImmutable();
-        $result = $this->challenge->setValidatedTime($validatedTime);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($validatedTime, $this->challenge->getValidatedTime());
-    }
-
-    public function test_validatedTime_setToNull(): void
-    {
-        $this->challenge->setValidatedTime(new \DateTimeImmutable());
-        $this->challenge->setValidatedTime(null);
-
-        $this->assertNull($this->challenge->getValidatedTime());
-    }
-
-    public function test_error_getterSetter(): void
-    {
-        $this->assertNull($this->challenge->getError());
-
-        $error = [
-            'type' => 'urn:ietf:params:acme:error:dns',
-            'detail' => 'DNS record not found',
-            'status' => 400
-        ];
-        $result = $this->challenge->setError($error);
-
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($error, $this->challenge->getError());
-    }
-
-    public function test_error_setToNull(): void
-    {
-        $this->challenge->setError(['type' => 'test']);
-        $this->challenge->setError(null);
-
-        $this->assertNull($this->challenge->getError());
-    }
-
-    public function test_valid_getterSetter(): void
-    {
-        $this->assertFalse($this->challenge->isValid());
-
-        $result = $this->challenge->setValid(true);
-        $this->assertSame($this->challenge, $result);
-        $this->assertTrue($this->challenge->isValid());
-
-        $this->challenge->setValid(false);
-        $this->assertFalse($this->challenge->isValid());
-    }
-
-    public function test_isInvalid(): void
-    {
-        $this->assertFalse($this->challenge->isInvalid());
-
-        $this->challenge->setStatus(ChallengeStatus::INVALID);
-        $this->assertTrue($this->challenge->isInvalid());
-
-        $this->challenge->setStatus(ChallengeStatus::VALID);
-        $this->assertFalse($this->challenge->isInvalid());
-    }
-
-    public function test_isProcessing(): void
-    {
-        $this->assertFalse($this->challenge->isProcessing());
-
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertTrue($this->challenge->isProcessing());
-
-        $this->challenge->setStatus(ChallengeStatus::PENDING);
-        $this->assertFalse($this->challenge->isProcessing());
-    }
-
-    public function test_isDns01(): void
-    {
         // Challenge 默认就是 DNS-01 类型
-        $this->assertTrue($this->challenge->isDns01());
+        $this->assertTrue($challenge->isDns01());
 
         // 显式设置 DNS-01 类型
-        $this->challenge->setType(ChallengeType::DNS_01);
-        $this->assertTrue($this->challenge->isDns01());
+        $challenge->setType(ChallengeType::DNS_01);
+        $this->assertTrue($challenge->isDns01());
     }
 
-    public function test_getFullDnsRecordName_withValue(): void
+    public function testGetFullDnsRecordNameWithValue(): void
     {
+        $challenge = $this->createEntity();
         $recordName = '_acme-challenge.example.com';
-        $this->challenge->setDnsRecordName($recordName);
+        $challenge->setDnsRecordName($recordName);
 
-        $this->assertSame($recordName, $this->challenge->getFullDnsRecordName());
+        $this->assertSame($recordName, $challenge->getFullDnsRecordName());
     }
 
-    public function test_getFullDnsRecordName_withNull(): void
+    public function testGetFullDnsRecordNameWithNull(): void
     {
-        $this->challenge->setDnsRecordName(null);
+        $challenge = $this->createEntity();
+        $challenge->setDnsRecordName(null);
 
-        $this->assertSame('', $this->challenge->getFullDnsRecordName());
+        $this->assertSame('', $challenge->getFullDnsRecordName());
     }
 
-    public function test_calculateDnsRecordValue_withKeyAuthorization(): void
+    public function testCalculateDnsRecordValueWithKeyAuthorization(): void
     {
+        $challenge = $this->createEntity();
         $keyAuth = 'test_token.test_key_auth';
-        $this->challenge->setKeyAuthorization($keyAuth);
+        $challenge->setKeyAuthorization($keyAuth);
 
         // 计算预期值：SHA256 + Base64URL
         $hash = hash('sha256', $keyAuth, true);
         $expectedValue = rtrim(strtr(base64_encode($hash), '+/', '-_'), '=');
 
-        $this->assertSame($expectedValue, $this->challenge->calculateDnsRecordValue());
+        $this->assertSame($expectedValue, $challenge->calculateDnsRecordValue());
     }
 
-    public function test_calculateDnsRecordValue_withEmptyKeyAuthorization(): void
+    public function testCalculateDnsRecordValueWithEmptyKeyAuthorization(): void
     {
+        $challenge = $this->createEntity();
+
         // 没有设置 keyAuthorization 时应该返回空字符串
-        $this->assertSame('', $this->challenge->calculateDnsRecordValue());
+        $this->assertSame('', $challenge->calculateDnsRecordValue());
     }
 
-    public function test_toString(): void
+    public function testToString(): void
     {
-        $this->challenge->setType(ChallengeType::DNS_01);
+        $challenge = $this->createEntity();
+        $challenge->setType(ChallengeType::DNS_01);
 
         $expected = 'Challenge #0 (dns-01)';
-        $this->assertSame($expected, (string)$this->challenge);
+        $this->assertSame($expected, (string) $challenge);
     }
 
-    public function test_stringableInterface(): void
+    public function testStringableInterface(): void
     {
-        $this->assertInstanceOf(\Stringable::class, $this->challenge);
+        $challenge = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $challenge);
     }
 
-    public function test_fluentInterface_chaining(): void
+    public function testFluentInterfaceChaining(): void
     {
+        $challenge = $this->createEntity();
         $authorization = $this->createMock(Authorization::class);
         $url = 'https://acme-v02.api.letsencrypt.org/acme/chall-v3/123456/abc';
         $token = 'test_token_123';
@@ -296,67 +153,67 @@ class ChallengeTest extends TestCase
         $validatedTime = new \DateTimeImmutable();
         $error = ['type' => 'test', 'detail' => 'test error'];
 
-        $result = $this->challenge
-            ->setAuthorization($authorization)
-            ->setChallengeUrl($url)
-            ->setType(ChallengeType::DNS_01)
-            ->setStatus(ChallengeStatus::VALID)
-            ->setToken($token)
-            ->setKeyAuthorization($keyAuth)
-            ->setDnsRecordName($dnsName)
-            ->setDnsRecordValue($dnsValue)
-            ->setValidatedTime($validatedTime)
-            ->setError($error)
-            ->setValid(true);
+        $challenge->setAuthorization($authorization);
+        $challenge->setChallengeUrl($url);
+        $challenge->setType(ChallengeType::DNS_01);
+        $challenge->setStatus(ChallengeStatus::VALID);
+        $challenge->setToken($token);
+        $challenge->setKeyAuthorization($keyAuth);
+        $challenge->setDnsRecordName($dnsName);
+        $challenge->setDnsRecordValue($dnsValue);
+        $challenge->setValidatedTime($validatedTime);
+        $challenge->setError($error);
+        $challenge->setValid(true);
+        $result = $challenge;
 
-        $this->assertSame($this->challenge, $result);
-        $this->assertSame($authorization, $this->challenge->getAuthorization());
-        $this->assertSame($url, $this->challenge->getChallengeUrl());
-        $this->assertSame(ChallengeType::DNS_01, $this->challenge->getType());
-        $this->assertSame(ChallengeStatus::VALID, $this->challenge->getStatus());
-        $this->assertSame($token, $this->challenge->getToken());
-        $this->assertSame($keyAuth, $this->challenge->getKeyAuthorization());
-        $this->assertSame($dnsName, $this->challenge->getDnsRecordName());
-        $this->assertSame($dnsValue, $this->challenge->getDnsRecordValue());
-        $this->assertSame($validatedTime, $this->challenge->getValidatedTime());
-        $this->assertSame($error, $this->challenge->getError());
-        $this->assertTrue($this->challenge->isValid());
+        $this->assertSame($challenge, $result);
+        $this->assertSame($authorization, $challenge->getAuthorization());
+        $this->assertSame($url, $challenge->getChallengeUrl());
+        $this->assertSame(ChallengeType::DNS_01, $challenge->getType());
+        $this->assertSame(ChallengeStatus::VALID, $challenge->getStatus());
+        $this->assertSame($token, $challenge->getToken());
+        $this->assertSame($keyAuth, $challenge->getKeyAuthorization());
+        $this->assertSame($dnsName, $challenge->getDnsRecordName());
+        $this->assertSame($dnsValue, $challenge->getDnsRecordValue());
+        $this->assertSame($validatedTime, $challenge->getValidatedTime());
+        $this->assertSame($error, $challenge->getError());
+        $this->assertTrue($challenge->isValid());
     }
 
-    public function test_businessScenario_challengeCreation(): void
+    public function testBusinessScenarioChallengeCreation(): void
     {
+        $challenge = $this->createEntity();
         $authorization = $this->createMock(Authorization::class);
 
-        $this->challenge
-            ->setAuthorization($authorization)
-            ->setChallengeUrl('https://acme-v02.api.letsencrypt.org/acme/chall-v3/123456/abc')
-            ->setType(ChallengeType::DNS_01)
-            ->setStatus(ChallengeStatus::PENDING)
-            ->setToken('test_token_123456789')
-            ->setKeyAuthorization('test_token_123456789.test_key_auth');
+        $challenge->setAuthorization($authorization);
+        $challenge->setChallengeUrl('https://acme-v02.api.letsencrypt.org/acme/chall-v3/123456/abc');
+        $challenge->setType(ChallengeType::DNS_01);
+        $challenge->setStatus(ChallengeStatus::PENDING);
+        $challenge->setToken('test_token_123456789');
+        $challenge->setKeyAuthorization('test_token_123456789.test_key_auth');
 
-        $this->assertSame(ChallengeStatus::PENDING, $this->challenge->getStatus());
-        $this->assertFalse($this->challenge->isValid());
-        $this->assertFalse($this->challenge->isProcessing());
-        $this->assertFalse($this->challenge->isInvalid());
-        $this->assertTrue($this->challenge->isDns01());
+        $this->assertSame(ChallengeStatus::PENDING, $challenge->getStatus());
+        $this->assertFalse($challenge->isValid());
+        $this->assertFalse($challenge->isProcessing());
+        $this->assertFalse($challenge->isInvalid());
+        $this->assertTrue($challenge->isDns01());
     }
 
-    public function test_businessScenario_dnsRecordSetup(): void
+    public function testBusinessScenarioDnsRecordSetup(): void
     {
+        $challenge = $this->createEntity();
         $token = 'test_token_123456789';
         $keyAuth = 'test_token_123456789.test_key_auth_content';
 
-        $this->challenge
-            ->setToken($token)
-            ->setKeyAuthorization($keyAuth)
-            ->setDnsRecordName('_acme-challenge.example.com');
+        $challenge->setToken($token);
+        $challenge->setKeyAuthorization($keyAuth);
+        $challenge->setDnsRecordName('_acme-challenge.example.com');
 
         // DNS 记录名称应该正确设置
-        $this->assertSame('_acme-challenge.example.com', $this->challenge->getFullDnsRecordName());
+        $this->assertSame('_acme-challenge.example.com', $challenge->getFullDnsRecordName());
 
         // DNS 记录值应该根据 keyAuthorization 计算
-        $calculatedValue = $this->challenge->calculateDnsRecordValue();
+        $calculatedValue = $challenge->calculateDnsRecordValue();
         $this->assertNotEmpty($calculatedValue);
 
         // 验证 Base64URL 编码特征（无填充，使用 - 和 _）
@@ -365,134 +222,150 @@ class ChallengeTest extends TestCase
         $this->assertStringNotContainsString('=', $calculatedValue);
     }
 
-    public function test_businessScenario_challengeProgression(): void
+    public function testBusinessScenarioChallengeProgression(): void
     {
+        $challenge = $this->createEntity();
+
         // 初始状态：等待中
-        $this->challenge->setStatus(ChallengeStatus::PENDING);
-        $this->assertSame(ChallengeStatus::PENDING, $this->challenge->getStatus());
-        $this->assertFalse($this->challenge->isValid());
-        $this->assertFalse($this->challenge->isProcessing());
+        $challenge->setStatus(ChallengeStatus::PENDING);
+        $this->assertSame(ChallengeStatus::PENDING, $challenge->getStatus());
+        $this->assertFalse($challenge->isValid());
+        $this->assertFalse($challenge->isProcessing());
 
         // 处理中
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertTrue($this->challenge->isProcessing());
-        $this->assertFalse($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertTrue($challenge->isProcessing());
+        $this->assertFalse($challenge->isValid());
 
         // 验证成功
-        $this->challenge
-            ->setStatus(ChallengeStatus::VALID)
-            ->setValidatedTime(new \DateTimeImmutable());
+        $challenge->setStatus(ChallengeStatus::VALID);
+        $challenge->setValidatedTime(new \DateTimeImmutable());
 
-        $this->assertTrue($this->challenge->isValid());
-        $this->assertFalse($this->challenge->isProcessing());
-        $this->assertNotNull($this->challenge->getValidatedTime());
+        $this->assertTrue($challenge->isValid());
+        $this->assertFalse($challenge->isProcessing());
+        $this->assertNotNull($challenge->getValidatedTime());
     }
 
-    public function test_businessScenario_challengeFailure(): void
+    public function testBusinessScenarioChallengeFailure(): void
     {
+        $challenge = $this->createEntity();
         $error = [
             'type' => 'urn:ietf:params:acme:error:dns',
             'detail' => 'No TXT record found at _acme-challenge.example.com',
-            'status' => 400
+            'status' => 400,
         ];
 
-        $this->challenge
-            ->setStatus(ChallengeStatus::INVALID)
-            ->setError($error);
+        $challenge->setStatus(ChallengeStatus::INVALID);
+        $challenge->setError($error);
 
-        $this->assertTrue($this->challenge->isInvalid());
-        $this->assertFalse($this->challenge->isValid());
-        $this->assertNotNull($this->challenge->getError());
-        $this->assertSame('urn:ietf:params:acme:error:dns', $this->challenge->getError()['type']);
-        $this->assertStringContainsString('TXT record', $this->challenge->getError()['detail']);
+        $this->assertTrue($challenge->isInvalid());
+        $this->assertFalse($challenge->isValid());
+        $error = $challenge->getError();
+        $this->assertIsArray($error);
+        $this->assertSame('urn:ietf:params:acme:error:dns', $error['type']);
+        $this->assertIsString($error['detail']);
+        $this->assertStringContainsString('TXT record', $error['detail']);
     }
 
-    public function test_businessScenario_wildcardDomainChallenge(): void
+    public function testBusinessScenarioWildcardDomainChallenge(): void
     {
-        $this->challenge
-            ->setToken('wildcard_token_123')
-            ->setKeyAuthorization('wildcard_token_123.wildcard_key_auth')
-            ->setDnsRecordName('_acme-challenge.example.com') // 通配符域名的挑战记录
-            ->setType(ChallengeType::DNS_01)
-            ->setStatus(ChallengeStatus::VALID);
+        $challenge = $this->createEntity();
 
-        $this->assertTrue($this->challenge->isDns01());
-        $this->assertTrue($this->challenge->isValid());
-        $this->assertSame('_acme-challenge.example.com', $this->challenge->getFullDnsRecordName());
+        $challenge->setToken('wildcard_token_123');
+        $challenge->setKeyAuthorization('wildcard_token_123.wildcard_key_auth');
+        $challenge->setDnsRecordName('_acme-challenge.example.com'); // 通配符域名的挑战记录
+        $challenge->setType(ChallengeType::DNS_01);
+        $challenge->setStatus(ChallengeStatus::VALID);
+
+        $this->assertTrue($challenge->isDns01());
+        $this->assertTrue($challenge->isValid());
+        $this->assertSame('_acme-challenge.example.com', $challenge->getFullDnsRecordName());
 
         // 通配符域名的 DNS 记录值计算应该正常工作
-        $dnsValue = $this->challenge->calculateDnsRecordValue();
+        $dnsValue = $challenge->calculateDnsRecordValue();
         $this->assertNotEmpty($dnsValue);
     }
 
-    public function test_edgeCases_emptyUrl(): void
+    public function testEdgeCasesEmptyUrl(): void
     {
-        $this->challenge->setChallengeUrl('');
-        $this->assertSame('', $this->challenge->getChallengeUrl());
+        $challenge = $this->createEntity();
+        $challenge->setChallengeUrl('');
+        $this->assertSame('', $challenge->getChallengeUrl());
     }
 
-    public function test_edgeCases_longToken(): void
+    public function testEdgeCasesLongToken(): void
     {
+        $challenge = $this->createEntity();
         $longToken = str_repeat('a', 200);
-        $this->challenge->setToken($longToken);
+        $challenge->setToken($longToken);
 
-        $this->assertSame($longToken, $this->challenge->getToken());
+        $this->assertSame($longToken, $challenge->getToken());
     }
 
-    public function test_edgeCases_emptyError(): void
+    public function testEdgeCasesEmptyError(): void
     {
-        $this->challenge->setError([]);
-        $this->assertSame([], $this->challenge->getError());
+        $challenge = $this->createEntity();
+        $challenge->setError([]);
+        $this->assertSame([], $challenge->getError());
     }
 
-    public function test_edgeCases_complexDnsRecordName(): void
+    public function testEdgeCasesComplexDnsRecordName(): void
     {
+        $challenge = $this->createEntity();
         $complexName = '_acme-challenge.sub.domain.example.com';
-        $this->challenge->setDnsRecordName($complexName);
+        $challenge->setDnsRecordName($complexName);
 
-        $this->assertSame($complexName, $this->challenge->getFullDnsRecordName());
+        $this->assertSame($complexName, $challenge->getFullDnsRecordName());
     }
 
-    public function test_stateTransitions_pendingToProcessing(): void
+    public function testStateTransitionsPendingToProcessing(): void
     {
-        $this->challenge->setStatus(ChallengeStatus::PENDING);
-        $this->assertSame(ChallengeStatus::PENDING, $this->challenge->getStatus());
-        $this->assertFalse($this->challenge->isProcessing());
+        $challenge = $this->createEntity();
 
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertSame(ChallengeStatus::PROCESSING, $this->challenge->getStatus());
-        $this->assertTrue($this->challenge->isProcessing());
+        $challenge->setStatus(ChallengeStatus::PENDING);
+        $this->assertSame(ChallengeStatus::PENDING, $challenge->getStatus());
+        $this->assertFalse($challenge->isProcessing());
+
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertSame(ChallengeStatus::PROCESSING, $challenge->getStatus());
+        $this->assertTrue($challenge->isProcessing());
     }
 
-    public function test_stateTransitions_processingToValid(): void
+    public function testStateTransitionsProcessingToValid(): void
     {
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertTrue($this->challenge->isProcessing());
-        $this->assertFalse($this->challenge->isValid());
+        $challenge = $this->createEntity();
 
-        $this->challenge->setStatus(ChallengeStatus::VALID);
-        $this->assertFalse($this->challenge->isProcessing());
-        $this->assertTrue($this->challenge->isValid());
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertTrue($challenge->isProcessing());
+        $this->assertFalse($challenge->isValid());
+
+        $challenge->setStatus(ChallengeStatus::VALID);
+        $this->assertFalse($challenge->isProcessing());
+        $this->assertTrue($challenge->isValid());
     }
 
-    public function test_stateTransitions_processingToInvalid(): void
+    public function testStateTransitionsProcessingToInvalid(): void
     {
-        $this->challenge->setStatus(ChallengeStatus::PROCESSING);
-        $this->assertTrue($this->challenge->isProcessing());
-        $this->assertFalse($this->challenge->isInvalid());
+        $challenge = $this->createEntity();
 
-        $this->challenge->setStatus(ChallengeStatus::INVALID);
-        $this->assertFalse($this->challenge->isProcessing());
-        $this->assertTrue($this->challenge->isInvalid());
+        $challenge->setStatus(ChallengeStatus::PROCESSING);
+        $this->assertTrue($challenge->isProcessing());
+        $this->assertFalse($challenge->isInvalid());
+
+        $challenge->setStatus(ChallengeStatus::INVALID);
+        $this->assertFalse($challenge->isProcessing());
+        $this->assertTrue($challenge->isInvalid());
     }
 
-    public function test_cryptographicFunctions_sha256Calculation(): void
+    public function testCryptographicFunctionsSha256Calculation(): void
     {
+        $challenge = $this->createEntity();
+
         // 测试实际的 SHA256 + Base64URL 编码
         $keyAuth = 'test_token.test_key_fingerprint';
-        $this->challenge->setKeyAuthorization($keyAuth);
+        $challenge->setKeyAuthorization($keyAuth);
 
-        $result = $this->challenge->calculateDnsRecordValue();
+        $result = $challenge->calculateDnsRecordValue();
 
         // 验证结果是有效的 Base64URL 编码
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $result);
@@ -501,17 +374,41 @@ class ChallengeTest extends TestCase
         $this->assertSame(43, strlen($result));
 
         // 验证一致性：相同输入应该产生相同输出
-        $this->assertSame($result, $this->challenge->calculateDnsRecordValue());
+        $this->assertSame($result, $challenge->calculateDnsRecordValue());
     }
 
-    public function test_cryptographicFunctions_differentInputsDifferentOutputs(): void
+    public function testCryptographicFunctionsDifferentInputsDifferentOutputs(): void
     {
-        $this->challenge->setKeyAuthorization('input1');
-        $result1 = $this->challenge->calculateDnsRecordValue();
+        $challenge = $this->createEntity();
 
-        $this->challenge->setKeyAuthorization('input2');
-        $result2 = $this->challenge->calculateDnsRecordValue();
+        $challenge->setKeyAuthorization('input1');
+        $result1 = $challenge->calculateDnsRecordValue();
+
+        $challenge->setKeyAuthorization('input2');
+        $result2 = $challenge->calculateDnsRecordValue();
 
         $this->assertNotSame($result1, $result2);
+    }
+
+    protected function createEntity(): Challenge
+    {
+        return new Challenge();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'challengeUrl' => ['challengeUrl', 'https://acme.example.com/challenge/123'];
+        yield 'type' => ['type', ChallengeType::DNS_01];
+        yield 'status' => ['status', ChallengeStatus::VALID];
+        yield 'token' => ['token', 'test_token_123'];
+        yield 'keyAuthorization' => ['keyAuthorization', 'test_token_123.test_key_auth'];
+        yield 'dnsRecordName' => ['dnsRecordName', '_acme-challenge.example.com'];
+        yield 'dnsRecordValue' => ['dnsRecordValue', 'test_dns_value'];
+        yield 'validatedTime' => ['validatedTime', new \DateTimeImmutable()];
+        yield 'error' => ['error', ['type' => 'test', 'detail' => 'test error']];
+        yield 'valid' => ['valid', true];
     }
 }

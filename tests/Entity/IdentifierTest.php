@@ -4,255 +4,194 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Entity;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\ACMEClientBundle\Entity\Identifier;
 use Tourze\ACMEClientBundle\Entity\Order;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * Identifier 实体测试类
+ *
+ * @internal
  */
-class IdentifierTest extends TestCase
+#[CoversClass(Identifier::class)]
+final class IdentifierTest extends AbstractEntityTestCase
 {
-    private Identifier $identifier;
-
-    protected function setUp(): void
+    protected function createEntity(): Identifier
     {
-        $this->identifier = new Identifier();
+        return new Identifier();
     }
 
-    public function test_constructor_defaultValues(): void
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
     {
-        $this->assertNull($this->identifier->getId());
-        $this->assertNull($this->identifier->getOrder());
-        $this->assertSame('dns', $this->identifier->getType());
-        $this->assertFalse($this->identifier->isWildcard());
-        $this->assertFalse($this->identifier->isValid());
+        yield 'type' => ['type', 'dns'];
+        yield 'value' => ['value', 'example.com'];
+        yield 'wildcard' => ['wildcard', true];
+        yield 'valid' => ['valid', true];
     }
 
-    public function test_type_getterSetter(): void
+    public function testToStringWithDnsType(): void
     {
-        $type = 'http';
-        $result = $this->identifier->setType($type);
+        $identifier = $this->createEntity();
+        $identifier->setType('dns');
+        $identifier->setValue('example.com');
 
-        $this->assertSame($this->identifier, $result);
-        $this->assertSame($type, $this->identifier->getType());
+        $this->assertSame('dns: example.com', (string) $identifier);
     }
 
-    public function test_type_defaultDns(): void
+    public function testToStringWithHttpType(): void
     {
-        $this->assertSame('dns', $this->identifier->getType());
+        $identifier = $this->createEntity();
+        $identifier->setType('http');
+        $identifier->setValue('example.com');
+
+        $this->assertSame('http: example.com', (string) $identifier);
     }
 
-    public function test_value_getterSetter(): void
+    public function testToStringWithWildcardDomain(): void
     {
-        $value = 'example.com';
-        $result = $this->identifier->setValue($value);
+        $identifier = $this->createEntity();
+        $identifier->setType('dns');
+        $identifier->setValue('*.example.com');
+        $identifier->setWildcard(true);
 
-        $this->assertSame($this->identifier, $result);
-        $this->assertSame($value, $this->identifier->getValue());
+        $this->assertSame('dns: *.example.com', (string) $identifier);
     }
 
-    public function test_value_withDifferentDomains(): void
+    public function testStringableInterface(): void
     {
-        $domains = [
-            'example.com',
-            'sub.example.com',
-            'api.test.example.org',
-            'localhost'
-        ];
-
-        foreach ($domains as $domain) {
-            $this->identifier->setValue($domain);
-            $this->assertSame($domain, $this->identifier->getValue());
-        }
+        $identifier = $this->createEntity();
+        $this->assertInstanceOf(\Stringable::class, $identifier);
     }
 
-    public function test_wildcard_getterSetter(): void
+    public function testFluentInterfaceChaining(): void
     {
-        $this->assertFalse($this->identifier->isWildcard());
-
-        $result = $this->identifier->setWildcard(true);
-        $this->assertSame($this->identifier, $result);
-        $this->assertTrue($this->identifier->isWildcard());
-
-        $this->identifier->setWildcard(false);
-        $this->assertFalse($this->identifier->isWildcard());
-    }
-
-    public function test_valid_getterSetter(): void
-    {
-        $this->assertFalse($this->identifier->isValid());
-
-        $result = $this->identifier->setValid(true);
-        $this->assertSame($this->identifier, $result);
-        $this->assertTrue($this->identifier->isValid());
-
-        $this->identifier->setValid(false);
-        $this->assertFalse($this->identifier->isValid());
-    }
-
-    public function test_order_getterSetter(): void
-    {
+        $identifier = $this->createEntity();
         $order = $this->createMock(Order::class);
 
-        $result = $this->identifier->setOrder($order);
-        $this->assertSame($this->identifier, $result);
-        $this->assertSame($order, $this->identifier->getOrder());
+        $identifier->setOrder($order);
+        $identifier->setType('http');
+        $identifier->setValue('api.example.com');
+        $identifier->setWildcard(true);
+        $identifier->setValid(true);
+        $result = $identifier;
+
+        $this->assertSame($identifier, $result);
+        $this->assertSame($order, $identifier->getOrder());
+        $this->assertSame('http', $identifier->getType());
+        $this->assertSame('api.example.com', $identifier->getValue());
+        $this->assertTrue($identifier->isWildcard());
+        $this->assertTrue($identifier->isValid());
     }
 
-    public function test_order_setToNull(): void
+    public function testBusinessScenarioDnsIdentifier(): void
     {
-        $order = $this->createMock(Order::class);
-        $this->identifier->setOrder($order);
-
-        $this->identifier->setOrder(null);
-        $this->assertNull($this->identifier->getOrder());
-    }
-
-    public function test_toString_withDnsType(): void
-    {
-        $this->identifier->setType('dns')->setValue('example.com');
-
-        $this->assertSame('dns: example.com', (string)$this->identifier);
-    }
-
-    public function test_toString_withHttpType(): void
-    {
-        $this->identifier->setType('http')->setValue('example.com');
-
-        $this->assertSame('http: example.com', (string)$this->identifier);
-    }
-
-    public function test_toString_withWildcardDomain(): void
-    {
-        $this->identifier
-            ->setType('dns')
-            ->setValue('*.example.com')
-            ->setWildcard(true);
-
-        $this->assertSame('dns: *.example.com', (string)$this->identifier);
-    }
-
-    public function test_stringableInterface(): void
-    {
-        $this->assertInstanceOf(\Stringable::class, $this->identifier);
-    }
-
-    public function test_fluentInterface_chaining(): void
-    {
+        $identifier = $this->createEntity();
         $order = $this->createMock(Order::class);
 
-        $result = $this->identifier
-            ->setOrder($order)
-            ->setType('http')
-            ->setValue('api.example.com')
-            ->setWildcard(true)
-            ->setValid(true);
+        $identifier->setOrder($order);
+        $identifier->setType('dns');
+        $identifier->setValue('app.example.com');
+        $identifier->setWildcard(false);
+        $identifier->setValid(true);
 
-        $this->assertSame($this->identifier, $result);
-        $this->assertSame($order, $this->identifier->getOrder());
-        $this->assertSame('http', $this->identifier->getType());
-        $this->assertSame('api.example.com', $this->identifier->getValue());
-        $this->assertTrue($this->identifier->isWildcard());
-        $this->assertTrue($this->identifier->isValid());
+        $this->assertSame('dns: app.example.com', (string) $identifier);
+        $this->assertFalse($identifier->isWildcard());
+        $this->assertTrue($identifier->isValid());
     }
 
-    public function test_businessScenario_dnsIdentifier(): void
+    public function testBusinessScenarioWildcardDomain(): void
     {
-        $order = $this->createMock(Order::class);
+        $identifier = $this->createEntity();
+        $identifier->setType('dns');
+        $identifier->setValue('*.example.com');
+        $identifier->setWildcard(true);
+        $identifier->setValid(false);
 
-        $this->identifier
-            ->setOrder($order)
-            ->setType('dns')
-            ->setValue('app.example.com')
-            ->setWildcard(false)
-            ->setValid(true);
-
-        $this->assertSame('dns: app.example.com', (string)$this->identifier);
-        $this->assertFalse($this->identifier->isWildcard());
-        $this->assertTrue($this->identifier->isValid());
+        $this->assertTrue($identifier->isWildcard());
+        $this->assertStringContainsString('*', $identifier->getValue());
+        $this->assertFalse($identifier->isValid());
     }
 
-    public function test_businessScenario_wildcardDomain(): void
+    public function testBusinessScenarioHttpChallenge(): void
     {
-        $this->identifier
-            ->setType('dns')
-            ->setValue('*.example.com')
-            ->setWildcard(true)
-            ->setValid(false);
+        $identifier = $this->createEntity();
+        $identifier->setType('http');
+        $identifier->setValue('example.com');
+        $identifier->setWildcard(false);
+        $identifier->setValid(true);
 
-        $this->assertTrue($this->identifier->isWildcard());
-        $this->assertStringContainsString('*', $this->identifier->getValue());
-        $this->assertFalse($this->identifier->isValid());
+        $this->assertSame('http', $identifier->getType());
+        $this->assertFalse($identifier->isWildcard());
+        $this->assertTrue($identifier->isValid());
     }
 
-    public function test_businessScenario_httpChallenge(): void
+    public function testEdgeCasesEmptyValue(): void
     {
-        $this->identifier
-            ->setType('http')
-            ->setValue('example.com')
-            ->setWildcard(false)
-            ->setValid(true);
-
-        $this->assertSame('http', $this->identifier->getType());
-        $this->assertFalse($this->identifier->isWildcard());
-        $this->assertTrue($this->identifier->isValid());
+        $identifier = $this->createEntity();
+        $identifier->setValue('');
+        $this->assertSame('', $identifier->getValue());
+        $this->assertSame('dns: ', (string) $identifier);
     }
 
-    public function test_edgeCases_emptyValue(): void
+    public function testEdgeCasesLongDomain(): void
     {
-        $this->identifier->setValue('');
-        $this->assertSame('', $this->identifier->getValue());
-        $this->assertSame('dns: ', (string)$this->identifier);
-    }
-
-    public function test_edgeCases_longDomain(): void
-    {
+        $identifier = $this->createEntity();
         $longDomain = str_repeat('a', 250) . '.com';
-        $this->identifier->setValue($longDomain);
+        $identifier->setValue($longDomain);
 
-        $this->assertSame($longDomain, $this->identifier->getValue());
-        $this->assertStringContainsString($longDomain, (string)$this->identifier);
+        $this->assertSame($longDomain, $identifier->getValue());
+        $this->assertStringContainsString($longDomain, (string) $identifier);
     }
 
-    public function test_edgeCases_specialCharactersInType(): void
+    public function testEdgeCasesSpecialCharactersInType(): void
     {
-        $this->identifier->setType('custom-type');
-        $this->assertSame('custom-type', $this->identifier->getType());
+        $identifier = $this->createEntity();
+        $identifier->setType('custom-type');
+        $this->assertSame('custom-type', $identifier->getType());
     }
 
-    public function test_stateTransitions_validationFlow(): void
+    public function testStateTransitionsValidationFlow(): void
     {
+        $identifier = $this->createEntity();
+
         // 初始状态：无效
-        $this->assertFalse($this->identifier->isValid());
+        $this->assertFalse($identifier->isValid());
 
         // 设置域名信息
-        $this->identifier->setValue('example.com');
-        $this->assertFalse($this->identifier->isValid()); // 仍然无效直到验证
+        $identifier->setValue('example.com');
+        $this->assertFalse($identifier->isValid()); // 仍然无效直到验证
 
         // 验证通过
-        $this->identifier->setValid(true);
-        $this->assertTrue($this->identifier->isValid());
+        $identifier->setValid(true);
+        $this->assertTrue($identifier->isValid());
 
         // 可以重新标记为无效
-        $this->identifier->setValid(false);
-        $this->assertFalse($this->identifier->isValid());
+        $identifier->setValid(false);
+        $this->assertFalse($identifier->isValid());
     }
 
-    public function test_stateTransitions_wildcardFlow(): void
+    public function testStateTransitionsWildcardFlow(): void
     {
+        $identifier = $this->createEntity();
+
         // 普通域名
-        $this->identifier->setValue('example.com');
-        $this->assertFalse($this->identifier->isWildcard());
+        $identifier->setValue('example.com');
+        $this->assertFalse($identifier->isWildcard());
 
         // 变更为通配符域名
-        $this->identifier->setValue('*.example.com')->setWildcard(true);
-        $this->assertTrue($this->identifier->isWildcard());
-        $this->assertStringContainsString('*', $this->identifier->getValue());
+        $identifier->setValue('*.example.com');
+        $identifier->setWildcard(true);
+        $this->assertTrue($identifier->isWildcard());
+        $this->assertStringContainsString('*', $identifier->getValue());
 
         // 变回普通域名
-        $this->identifier->setValue('app.example.com')->setWildcard(false);
-        $this->assertFalse($this->identifier->isWildcard());
-        $this->assertStringNotContainsString('*', $this->identifier->getValue());
+        $identifier->setValue('app.example.com');
+        $identifier->setWildcard(false);
+        $this->assertFalse($identifier->isWildcard());
+        $this->assertStringNotContainsString('*', $identifier->getValue());
     }
 }

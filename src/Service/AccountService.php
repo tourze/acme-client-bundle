@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Tourze\ACMEClientBundle\Entity\Account;
 use Tourze\ACMEClientBundle\Enum\AccountStatus;
-use Tourze\ACMEClientBundle\Exception\AcmeClientException;
+use Tourze\ACMEClientBundle\Exception\AcmeOperationException;
 use Tourze\ACMEClientBundle\Repository\AccountRepository;
 
 /**
@@ -16,32 +18,37 @@ use Tourze\ACMEClientBundle\Repository\AccountRepository;
  *
  * 负责 ACME 账户的注册、密钥管理、状态同步等操作
  */
-class AccountService
+#[Autoconfigure(public: true)]
+#[WithMonologChannel(channel: 'acme_client')]
+readonly class AccountService
 {
     public function __construct(
-        private readonly AcmeApiClient $apiClient,
-        private readonly EntityManagerInterface $entityManager,
-        private readonly AccountRepository $accountRepository,
-        private readonly LoggerInterface $logger,
-        private readonly string $acmeServerUrl
-    ) {}
+        private AcmeApiClient $apiClient,
+        private EntityManagerInterface $entityManager,
+        private AccountRepository $accountRepository,
+        private LoggerInterface $logger,
+        private string $acmeServerUrl,
+    ) {
+    }
 
     /**
      * 注册新的 ACME 账户
+     *
+     * @param array<string> $contacts
      */
     public function registerAccount(
         array $contacts,
         bool $termsOfServiceAgreed = true,
-        ?string $privateKeyPem = null
+        ?string $privateKeyPem = null,
     ): Account {
         // 生成或使用提供的私钥
-        if ($privateKeyPem === null) {
+        if (null === $privateKeyPem) {
             $privateKeyPem = $this->generateAccountKey();
         }
 
         $privateKey = openssl_pkey_get_private($privateKeyPem);
-        if (!$privateKey) {
-            throw new AcmeClientException('Invalid private key provided');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid private key provided');
         }
 
         // 准备注册载荷
@@ -80,59 +87,53 @@ class AccountService
                 'error' => $e->getMessage(),
             ]);
 
-            throw new AcmeClientException(
-                "Account registration failed: {$e->getMessage()}",
-                0,
-                $e
-            );
+            throw new AcmeOperationException("Account registration failed: {$e->getMessage()}", 0, $e);
         }
     }
 
     /**
      * 获取现有账户信息
+     *
+     * @return array<string, mixed>
      */
     public function getAccountInfo(Account $account): array
     {
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
-        if (!$privateKey) {
-            throw new AcmeClientException('Invalid account private key');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid account private key');
         }
 
-        if ($account->getAccountUrl() === null) {
-            throw new AcmeClientException('Account URL not found');
+        if (null === $account->getAccountUrl()) {
+            throw new AcmeOperationException('Account URL not found');
         }
 
         try {
             // 发送获取账户信息的请求
-            $response = $this->apiClient->post(
+            return $this->apiClient->post(
                 $account->getAccountUrl(),
                 [],
                 $privateKey,
                 $account->getAccountUrl()
             );
-
-            return $response;
         } catch (\Throwable $e) {
-            throw new AcmeClientException(
-                "Failed to get account info: {$e->getMessage()}",
-                0,
-                $e
-            );
+            throw new AcmeOperationException("Failed to get account info: {$e->getMessage()}", 0, $e);
         }
     }
 
     /**
      * 更新账户信息
+     *
+     * @param array<string> $contacts
      */
     public function updateAccount(Account $account, array $contacts): Account
     {
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
-        if (!$privateKey) {
-            throw new AcmeClientException('Invalid account private key');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid account private key');
         }
 
-        if ($account->getAccountUrl() === null) {
-            throw new AcmeClientException('Account URL not found');
+        if (null === $account->getAccountUrl()) {
+            throw new AcmeOperationException('Account URL not found');
         }
 
         $payload = [
@@ -160,11 +161,7 @@ class AccountService
 
             return $account;
         } catch (\Throwable $e) {
-            throw new AcmeClientException(
-                "Account update failed: {$e->getMessage()}",
-                0,
-                $e
-            );
+            throw new AcmeOperationException("Account update failed: {$e->getMessage()}", 0, $e);
         }
     }
 
@@ -174,12 +171,12 @@ class AccountService
     public function deactivateAccount(Account $account): Account
     {
         $privateKey = openssl_pkey_get_private($account->getPrivateKey());
-        if (!$privateKey) {
-            throw new AcmeClientException('Invalid account private key');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid account private key');
         }
 
-        if ($account->getAccountUrl() === null) {
-            throw new AcmeClientException('Account URL not found');
+        if (null === $account->getAccountUrl()) {
+            throw new AcmeOperationException('Account URL not found');
         }
 
         $payload = [
@@ -207,16 +204,14 @@ class AccountService
 
             return $account;
         } catch (\Throwable $e) {
-            throw new AcmeClientException(
-                "Account deactivation failed: {$e->getMessage()}",
-                0,
-                $e
-            );
+            throw new AcmeOperationException("Account deactivation failed: {$e->getMessage()}", 0, $e);
         }
     }
 
     /**
      * 根据服务器URL查找账户
+     *
+     * @return array<Account>
      */
     public function findAccountsByServerUrl(string $serverUrl): array
     {
@@ -225,6 +220,8 @@ class AccountService
 
     /**
      * 根据状态查找账户
+     *
+     * @return array<Account>
      */
     public function findAccountsByStatus(AccountStatus $status): array
     {
@@ -236,7 +233,7 @@ class AccountService
      */
     public function isAccountValid(Account $account): bool
     {
-        return $account->getStatus() === AccountStatus::VALID;
+        return AccountStatus::VALID === $account->getStatus();
     }
 
     /**
@@ -251,13 +248,14 @@ class AccountService
         ];
 
         $privateKey = openssl_pkey_new($config);
-        if (!$privateKey) {
-            throw new AcmeClientException('Failed to generate private key');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Failed to generate private key');
         }
 
         $privateKeyPem = '';
-        if (!openssl_pkey_export($privateKey, $privateKeyPem)) {
-            throw new AcmeClientException('Failed to export private key');
+        $exportResult = openssl_pkey_export($privateKey, $privateKeyPem);
+        if (false === $exportResult || !is_string($privateKeyPem) || '' === $privateKeyPem) {
+            throw new AcmeOperationException('Failed to export private key');
         }
 
         return $privateKeyPem;
@@ -269,32 +267,61 @@ class AccountService
     private function createJwkFromPrivateKey(string $privateKeyPem): string
     {
         $privateKey = openssl_pkey_get_private($privateKeyPem);
-        if (!$privateKey) {
-            throw new AcmeClientException('Invalid private key');
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid private key');
         }
 
         $keyDetails = openssl_pkey_get_details($privateKey);
-        if (!$keyDetails || $keyDetails['type'] !== OPENSSL_KEYTYPE_RSA) {
-            throw new AcmeClientException('Only RSA keys are supported');
+        if (false === $keyDetails || OPENSSL_KEYTYPE_RSA !== $keyDetails['type']) {
+            throw new AcmeOperationException('Only RSA keys are supported');
+        }
+
+        if (!isset($keyDetails['rsa']) || !is_array($keyDetails['rsa'])) {
+            throw new AcmeOperationException('Missing RSA key details');
+        }
+
+        $rsaDetails = $keyDetails['rsa'];
+        if (!isset($rsaDetails['n'], $rsaDetails['e']) || !is_string($rsaDetails['n']) || !is_string($rsaDetails['e'])) {
+            throw new AcmeOperationException('Invalid RSA key details');
         }
 
         $jwk = [
             'kty' => 'RSA',
-            'n' => rtrim(strtr(base64_encode($keyDetails['rsa']['n']), '+/', '-_'), '='),
-            'e' => rtrim(strtr(base64_encode($keyDetails['rsa']['e']), '+/', '-_'), '='),
+            'n' => rtrim(strtr(base64_encode($rsaDetails['n']), '+/', '-_'), '='),
+            'e' => rtrim(strtr(base64_encode($rsaDetails['e']), '+/', '-_'), '='),
         ];
 
-        return json_encode($jwk);
+        $result = json_encode($jwk);
+        if (false === $result) {
+            throw new AcmeOperationException('Failed to encode JWK as JSON');
+        }
+
+        return $result;
     }
 
     /**
      * 从响应中获取 Location 头
      * 注意：这里需要修改 AcmeApiClient 来返回响应头信息
+     *
+     * @param array<string, mixed> $response
+     * @return string|null
      */
     private function getLocationFromResponse(array $response): ?string
     {
         // 临时实现，实际应该从HTTP响应头获取
-        return $response['location'] ?? null;
+        $location = $response['location'] ?? null;
+
+        return is_string($location) ? $location : null;
+    }
+
+    /**
+     * 更新账户联系方式
+     *
+     * @param array<string> $contacts
+     */
+    public function updateAccountContacts(Account $account, array $contacts): Account
+    {
+        return $this->updateAccount($account, $contacts);
     }
 
     /**
@@ -303,15 +330,19 @@ class AccountService
     public function findAccountByEmail(string $email, ?string $serverUrl = null): ?Account
     {
         $qb = $this->accountRepository->createQueryBuilder('a')
-            ->where('JSON_SEARCH(a.contacts, \'one\', :email) IS NOT NULL')
-            ->setParameter('email', "mailto:{$email}");
+            ->where('a.contacts LIKE :email')
+            ->setParameter('email', "%mailto:{$email}%")
+        ;
 
-        if ($serverUrl !== null) {
+        if (null !== $serverUrl) {
             $qb->andWhere('a.acmeServerUrl = :serverUrl')
-                ->setParameter('serverUrl', $serverUrl);
+                ->setParameter('serverUrl', $serverUrl)
+            ;
         }
 
-        return $qb->getQuery()->getOneOrNullResult();
+        $result = $qb->getQuery()->getOneOrNullResult();
+
+        return $result instanceof Account ? $result : null;
     }
 
     /**
@@ -321,25 +352,56 @@ class AccountService
         string $email,
         string $serverUrl,
         int $keySize = 2048,
-        bool $termsOfServiceAgreed = true
+        bool $termsOfServiceAgreed = true,
     ): Account {
         $contacts = ["mailto:{$email}"];
 
-        // 临时更新ACME服务器URL用于注册
-        $originalServerUrl = $this->acmeServerUrl;
+        // 生成私钥
+        $privateKeyPem = $this->generateAccountKey($keySize);
 
-        // 通过反射修改私有属性
-        $reflection = new \ReflectionClass($this);
-        $property = $reflection->getProperty('acmeServerUrl');
-        $property->setAccessible(true);
-        $property->setValue($this, $serverUrl);
+        $privateKey = openssl_pkey_get_private($privateKeyPem);
+        if (false === $privateKey) {
+            throw new AcmeOperationException('Invalid private key provided');
+        }
+
+        // 准备注册载荷
+        $payload = [
+            'contact' => $contacts,
+            'termsOfServiceAgreed' => $termsOfServiceAgreed,
+        ];
 
         try {
-            $account = $this->registerAccount($contacts, $termsOfServiceAgreed);
+            // 发送注册请求
+            $response = $this->apiClient->post('newAccount', $payload, $privateKey);
+
+            // 创建账户实体
+            $account = new Account();
+            $account->setAcmeServerUrl($serverUrl); // 使用传入的 serverUrl
+            $account->setContacts($contacts);
+            $account->setPrivateKey($privateKeyPem);
+            $account->setPublicKeyJwk($this->createJwkFromPrivateKey($privateKeyPem));
+            $account->setStatus(AccountStatus::VALID);
+            $account->setAccountUrl($this->getLocationFromResponse($response));
+            $account->setTermsOfServiceAgreed($termsOfServiceAgreed);
+
+            $this->entityManager->persist($account);
+            $this->entityManager->flush();
+
+            $this->logger->info('ACME account registered successfully by email', [
+                'account_id' => $account->getId(),
+                'email' => $email,
+                'server_url' => $serverUrl,
+            ]);
+
             return $account;
-        } finally {
-            // 恢复原始服务器URL
-            $property->setValue($this, $originalServerUrl);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to register ACME account by email', [
+                'email' => $email,
+                'server_url' => $serverUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new AcmeOperationException("Account registration failed: {$e->getMessage()}", 0, $e);
         }
     }
 
@@ -349,12 +411,12 @@ class AccountService
     public function getEmailFromAccount(Account $account): ?string
     {
         $contacts = $account->getContacts();
-        if ($contacts === null || $contacts === []) {
+        if (null === $contacts || [] === $contacts) {
             return null;
         }
 
         foreach ($contacts as $contact) {
-            if (is_string($contact) && str_starts_with($contact, 'mailto:')) {
+            if (str_starts_with($contact, 'mailto:')) {
                 return substr($contact, 7); // 移除 "mailto:" 前缀
             }
         }
@@ -368,5 +430,15 @@ class AccountService
     public function getAccountById(int $id): ?Account
     {
         return $this->accountRepository->find($id);
+    }
+
+    /**
+     * 通过联系邮箱查找账户（别名方法）
+     *
+     * @deprecated 使用 findAccountByEmail() 替代
+     */
+    public function findAccountByContactEmail(string $email, ?string $serverUrl = null): ?Account
+    {
+        return $this->findAccountByEmail($email, $serverUrl);
     }
 }

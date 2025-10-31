@@ -1,8 +1,50 @@
+parameters:
+  acme_server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'
+
 services:
   # default configuration for services in *this* file
   _defaults:
     autowire: true      # Automatically injects dependencies in your services.
     autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    bind:
+      $acmeServerUrl: '%acme_server_url%'
+      $directoryUrl: '%acme_server_url%'
 
+  Tourze\ACMEClientBundle\Controller\:
+    resource: '../../Controller/'
   Tourze\ACMEClientBundle\Service\:
     resource: '../../Service/'
+  Tourze\ACMEClientBundle\Repository\:
+    resource: '../../Repository/'
+
+  # 手动配置每个 Handler 类
+  Tourze\ACMEClientBundle\Command\Handler\CleanupHandler:
+    tags: ['acme_log_query.handler']
+
+  Tourze\ACMEClientBundle\Command\Handler\ExceptionQueryHandler:
+    tags: ['acme_log_query.handler']
+
+  Tourze\ACMEClientBundle\Command\Handler\OperationQueryHandler:
+    tags: ['acme_log_query.handler']
+
+  Tourze\ACMEClientBundle\Command\Handler\StatsHandler:
+    tags: ['acme_log_query.handler']
+
+  # 手动配置每个 Command 类
+  Tourze\ACMEClientBundle\Command\AcmeAccountRegisterCommand:
+    tags: ['console.command']
+
+  Tourze\ACMEClientBundle\Command\AcmeCertRenewCommand:
+    tags: ['console.command']
+
+  Tourze\ACMEClientBundle\Command\AcmeLogQueryCommand:
+    arguments:
+      $handlers:
+        - '@Tourze\ACMEClientBundle\Command\Handler\CleanupHandler'
+        - '@Tourze\ACMEClientBundle\Command\Handler\ExceptionQueryHandler'
+        - '@Tourze\ACMEClientBundle\Command\Handler\OperationQueryHandler'
+        - '@Tourze\ACMEClientBundle\Command\Handler\StatsHandler'
+    tags: ['console.command']
+
+  Tourze\ACMEClientBundle\Command\AcmeOrderCreateCommand:
+    tags: ['console.command']

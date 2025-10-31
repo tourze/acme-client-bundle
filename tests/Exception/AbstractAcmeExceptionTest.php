@@ -4,74 +4,81 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Exception;
 
-use PHPUnit\Framework\TestCase;
-use Tourze\ACMEClientBundle\Exception\AcmeClientException;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
+use Tourze\ACMEClientBundle\Exception\AcmeOperationException;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
 /**
  * ACME 客户端基础异常类测试
+ *
+ * @internal
  */
-class AcmeClientExceptionTest extends TestCase
+#[CoversClass(AbstractAcmeException::class)]
+final class AbstractAcmeExceptionTest extends AbstractExceptionTestCase
 {
-    public function test_exception_extends_standard_exception(): void
+    public function testExceptionExtendsStandardException(): void
     {
-        $exception = new AcmeClientException();
+        $exception = new AcmeOperationException('', 0, null, null);
 
         $this->assertInstanceOf(\Exception::class, $exception);
     }
 
-    public function test_exception_with_default_parameters(): void
+    public function testExceptionWithDefaultParameters(): void
     {
-        $exception = new AcmeClientException();
+        // 使用具体子类来测试抽象基类的功能
+        $exception = new AcmeOperationException();
 
-        $this->assertSame('', $exception->getMessage());
-        $this->assertSame(0, $exception->getCode());
+        // AcmeOperationException 有默认参数，需要相应调整期望值
+        $this->assertSame('ACME operation failed', $exception->getMessage());
+        $this->assertSame(500, $exception->getCode());
         $this->assertNull($exception->getPrevious());
-        $this->assertNull($exception->getAcmeErrorType());
+        $this->assertSame('operationFailed', $exception->getAcmeErrorType());
         $this->assertNull($exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_with_message_and_code(): void
+    public function testExceptionWithMessageAndCode(): void
     {
         $message = 'Test ACME error';
         $code = 400;
 
-        $exception = new AcmeClientException($message, $code);
+        $exception = new AcmeOperationException($message, $code);
 
         $this->assertSame($message, $exception->getMessage());
         $this->assertSame($code, $exception->getCode());
     }
 
-    public function test_exception_with_previous_exception(): void
+    public function testExceptionWithPreviousException(): void
     {
         $previous = new \RuntimeException('Previous error');
-        $exception = new AcmeClientException('ACME error', 400, $previous);
+        $exception = new AcmeOperationException('ACME error', 400, $previous);
 
         $this->assertSame($previous, $exception->getPrevious());
         $this->assertInstanceOf(\RuntimeException::class, $exception->getPrevious());
     }
 
-    public function test_exception_with_acme_error_type(): void
+    public function testExceptionWithAcmeErrorType(): void
     {
         $errorType = 'malformed';
-        $exception = new AcmeClientException('Bad request', 400, null, $errorType);
+        $exception = new AcmeOperationException('Bad request', 400, null, $errorType);
 
         $this->assertSame($errorType, $exception->getAcmeErrorType());
     }
 
-    public function test_exception_with_acme_error_details(): void
+    public function testExceptionWithAcmeErrorDetails(): void
     {
         $errorDetails = [
             'type' => 'urn:ietf:params:acme:error:malformed',
             'detail' => 'Request body was not valid JSON',
-            'status' => 400
+            'status' => 400,
         ];
 
-        $exception = new AcmeClientException('Bad request', 400, null, 'malformed', $errorDetails);
+        $exception = new AcmeOperationException('Bad request', 400, null, 'malformed', $errorDetails);
 
         $this->assertSame($errorDetails, $exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_with_all_parameters(): void
+    public function testExceptionWithAllParameters(): void
     {
         $message = 'ACME validation failed';
         $code = 400;
@@ -80,10 +87,10 @@ class AcmeClientExceptionTest extends TestCase
         $acmeErrorDetails = [
             'type' => 'urn:ietf:params:acme:error:malformed',
             'detail' => 'The request message was malformed',
-            'status' => 400
+            'status' => 400,
         ];
 
-        $exception = new AcmeClientException($message, $code, $previous, $acmeErrorType, $acmeErrorDetails);
+        $exception = new AcmeOperationException($message, $code, $previous, $acmeErrorType, $acmeErrorDetails);
 
         $this->assertSame($message, $exception->getMessage());
         $this->assertSame($code, $exception->getCode());
@@ -92,18 +99,18 @@ class AcmeClientExceptionTest extends TestCase
         $this->assertSame($acmeErrorDetails, $exception->getAcmeErrorDetails());
     }
 
-    public function test_exception_can_be_thrown_and_caught(): void
+    public function testExceptionCanBeThrownAndCaught(): void
     {
-        $this->expectException(AcmeClientException::class);
+        $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('Test exception');
         $this->expectExceptionCode(500);
 
-        throw new AcmeClientException('Test exception', 500);
+        throw new AcmeOperationException('Test exception', 500);
     }
 
-    public function test_exception_serialization(): void
+    public function testExceptionSerialization(): void
     {
-        $exception = new AcmeClientException(
+        $exception = new AcmeOperationException(
             'Test error',
             400,
             null,
@@ -114,20 +121,20 @@ class AcmeClientExceptionTest extends TestCase
         $serialized = serialize($exception);
         $unserialized = unserialize($serialized);
 
-        $this->assertInstanceOf(AcmeClientException::class, $unserialized);
+        $this->assertInstanceOf(AcmeOperationException::class, $unserialized);
         $this->assertSame('Test error', $unserialized->getMessage());
         $this->assertSame(400, $unserialized->getCode());
         // 注意：由于 readonly 属性，序列化后的自定义属性可能无法正确恢复
         // 这是预期行为，不影响异常的基本功能
     }
 
-    public function test_exception_string_representation(): void
+    public function testExceptionStringRepresentation(): void
     {
-        $exception = new AcmeClientException('Test error', 400);
+        $exception = new AcmeOperationException('Test error', 400);
 
-        $string = (string)$exception;
+        $string = (string) $exception;
 
-        $this->assertStringContainsString('AcmeClientException', $string);
+        $this->assertStringContainsString('AcmeOperationException', $string);
         $this->assertStringContainsString('Test error', $string);
         $this->assertStringContainsString(__FILE__, $string); // 包含文件信息
     }
@@ -135,11 +142,11 @@ class AcmeClientExceptionTest extends TestCase
     /**
      * 测试异常的堆栈跟踪
      */
-    public function test_exception_stack_trace(): void
+    public function testExceptionStackTrace(): void
     {
         try {
             $this->throwTestException();
-        } catch (AcmeClientException $e) {
+        } catch (AbstractAcmeException $e) {
             $trace = $e->getTrace();
 
             $this->assertNotEmpty($trace);
@@ -150,17 +157,17 @@ class AcmeClientExceptionTest extends TestCase
 
     private function throwTestException(): void
     {
-        throw new AcmeClientException('Test stack trace');
+        throw new AcmeOperationException('Test stack trace');
     }
 
     /**
      * 测试异常处理链
      */
-    public function test_exception_chain(): void
+    public function testExceptionChain(): void
     {
         $rootCause = new \RuntimeException('Root cause');
         $intermediate = new \InvalidArgumentException('Intermediate error', 0, $rootCause);
-        $acmeException = new AcmeClientException('ACME error', 400, $intermediate);
+        $acmeException = new AcmeOperationException('ACME error', 400, $intermediate);
 
         // 验证异常链
         $this->assertSame($intermediate, $acmeException->getPrevious());

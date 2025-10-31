@@ -6,6 +6,7 @@ namespace Tourze\ACMEClientBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
 use Tourze\ACMEClientBundle\Repository\AcmeOperationLogRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -18,10 +19,7 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  */
 #[ORM\Entity(repositoryClass: AcmeOperationLogRepository::class)]
 #[ORM\Table(name: 'acme_operation_logs', options: ['comment' => 'ACME 操作日志表，记录所有 ACME 操作的详细日志'])]
-#[ORM\Index(columns: ['operation'], name: 'idx_operation_type')]
-#[ORM\Index(columns: ['occurred_at'], name: 'idx_operation_occurred_time')]
-#[ORM\Index(columns: ['entity_type', 'entity_id'], name: 'idx_operation_entity')]
-#[ORM\Index(columns: ['level'], name: 'idx_operation_level')]
+#[ORM\Index(columns: ['entity_type', 'entity_id'], name: 'acme_operation_logs_idx_operation_entity')]
 class AcmeOperationLog implements \Stringable
 {
     use TimestampableAware;
@@ -29,51 +27,73 @@ class AcmeOperationLog implements \Stringable
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore-line property.unusedType (Doctrine auto-assigns after persist)
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: LogLevel::class, options: ['comment' => '日志级别'])]
     #[IndexColumn]
+    #[Assert\NotNull(message: '日志级别不能为空')]
+    #[Assert\Choice(callback: [LogLevel::class, 'cases'], message: '无效的日志级别')]
     private LogLevel $level = LogLevel::INFO;
 
     #[ORM\Column(type: Types::STRING, length: 100, options: ['comment' => '操作类型'])]
     #[IndexColumn]
+    #[Assert\NotBlank(message: '操作类型不能为空')]
+    #[Assert\Length(max: 100, maxMessage: '操作类型长度不能超过 {{ limit }} 个字符')]
     private string $operation;
 
     #[ORM\Column(type: Types::TEXT, options: ['comment' => '操作描述'])]
+    #[Assert\NotBlank(message: '操作描述不能为空')]
+    #[Assert\Length(max: 65535, maxMessage: '操作描述长度不能超过 {{ limit }} 个字符')]
     private string $message;
 
     #[ORM\Column(type: Types::STRING, length: 100, nullable: true, options: ['comment' => '相关实体类型'])]
     #[IndexColumn]
+    #[Assert\Length(max: 100, maxMessage: '实体类型长度不能超过 {{ limit }} 个字符')]
     private ?string $entityType = null;
 
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '相关实体ID'])]
     #[IndexColumn]
+    #[Assert\PositiveOrZero(message: '实体ID必须为非负数')]
     private ?int $entityId = null;
 
+    /**
+     * @var array<string, mixed>|null
+     */
     #[ORM\Column(type: Types::JSON, nullable: true, options: ['comment' => '操作上下文信息'])]
+    #[Assert\Type(type: 'array', message: '上下文信息必须为数组类型')]
     private ?array $context = null;
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => 'HTTP 请求 URL'])]
+    #[Assert\Length(max: 255, maxMessage: 'HTTP URL 长度不能超过 {{ limit }} 个字符')]
+    #[Assert\Url(message: '请输入有效的 URL 地址')]
     private ?string $httpUrl = null;
 
     #[ORM\Column(type: Types::STRING, length: 10, nullable: true, options: ['comment' => 'HTTP 请求方法'])]
+    #[Assert\Length(max: 10, maxMessage: 'HTTP 方法长度不能超过 {{ limit }} 个字符')]
+    #[Assert\Choice(choices: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'], message: '无效的 HTTP 方法')]
     private ?string $httpMethod = null;
 
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => 'HTTP 响应状态码'])]
+    #[Assert\Range(min: 100, max: 599, notInRangeMessage: 'HTTP 状态码必须在 {{ min }} 和 {{ max }} 之间')]
     private ?int $httpStatusCode = null;
 
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '操作耗时（毫秒）'])]
+    #[Assert\PositiveOrZero(message: '操作耗时必须为非负数')]
+    #[Assert\Range(min: 0, max: 3600000, notInRangeMessage: '操作耗时必须在 0 到 3600000 毫秒（1小时）之间')]
     private ?int $durationMs = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '操作是否成功'])]
+    #[Assert\Type(type: 'bool', message: '成功标识必须为布尔类型')]
     private bool $success = true;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '操作发生时间'])]
-    private \DateTimeImmutable $occurredAt;
+    #[IndexColumn]
+    #[Assert\NotNull(message: '操作发生时间不能为空')]
+    private \DateTimeImmutable $occurredTime;
 
     public function __construct()
     {
-        $this->occurredAt = new \DateTimeImmutable();
+        $this->occurredTime = new \DateTimeImmutable();
     }
 
     public function __toString(): string
@@ -91,10 +111,9 @@ class AcmeOperationLog implements \Stringable
         return $this->level;
     }
 
-    public function setLevel(LogLevel $level): static
+    public function setLevel(LogLevel $level): void
     {
         $this->level = $level;
-        return $this;
     }
 
     public function getOperation(): string
@@ -102,10 +121,9 @@ class AcmeOperationLog implements \Stringable
         return $this->operation;
     }
 
-    public function setOperation(string $operation): static
+    public function setOperation(string $operation): void
     {
         $this->operation = $operation;
-        return $this;
     }
 
     public function getMessage(): string
@@ -113,10 +131,9 @@ class AcmeOperationLog implements \Stringable
         return $this->message;
     }
 
-    public function setMessage(string $message): static
+    public function setMessage(string $message): void
     {
         $this->message = $message;
-        return $this;
     }
 
     public function getEntityType(): ?string
@@ -124,10 +141,9 @@ class AcmeOperationLog implements \Stringable
         return $this->entityType;
     }
 
-    public function setEntityType(?string $entityType): static
+    public function setEntityType(?string $entityType): void
     {
         $this->entityType = $entityType;
-        return $this;
     }
 
     public function getEntityId(): ?int
@@ -135,21 +151,25 @@ class AcmeOperationLog implements \Stringable
         return $this->entityId;
     }
 
-    public function setEntityId(?int $entityId): static
+    public function setEntityId(?int $entityId): void
     {
         $this->entityId = $entityId;
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getContext(): ?array
     {
         return $this->context;
     }
 
-    public function setContext(?array $context): static
+    /**
+     * @param array<string, mixed>|null $context
+     */
+    public function setContext(?array $context): void
     {
         $this->context = $context;
-        return $this;
     }
 
     public function getHttpUrl(): ?string
@@ -157,10 +177,9 @@ class AcmeOperationLog implements \Stringable
         return $this->httpUrl;
     }
 
-    public function setHttpUrl(?string $httpUrl): static
+    public function setHttpUrl(?string $httpUrl): void
     {
         $this->httpUrl = $httpUrl;
-        return $this;
     }
 
     public function getHttpMethod(): ?string
@@ -168,10 +187,9 @@ class AcmeOperationLog implements \Stringable
         return $this->httpMethod;
     }
 
-    public function setHttpMethod(?string $httpMethod): static
+    public function setHttpMethod(?string $httpMethod): void
     {
         $this->httpMethod = $httpMethod;
-        return $this;
     }
 
     public function getHttpStatusCode(): ?int
@@ -179,10 +197,9 @@ class AcmeOperationLog implements \Stringable
         return $this->httpStatusCode;
     }
 
-    public function setHttpStatusCode(?int $httpStatusCode): static
+    public function setHttpStatusCode(?int $httpStatusCode): void
     {
         $this->httpStatusCode = $httpStatusCode;
-        return $this;
     }
 
     public function getDurationMs(): ?int
@@ -190,10 +207,9 @@ class AcmeOperationLog implements \Stringable
         return $this->durationMs;
     }
 
-    public function setDurationMs(?int $durationMs): static
+    public function setDurationMs(?int $durationMs): void
     {
         $this->durationMs = $durationMs;
-        return $this;
     }
 
     public function isSuccess(): bool
@@ -201,41 +217,39 @@ class AcmeOperationLog implements \Stringable
         return $this->success;
     }
 
-    public function setSuccess(bool $success): static
+    public function setSuccess(bool $success): void
     {
         $this->success = $success;
-        return $this;
     }
 
-    public function getOccurredAt(): \DateTimeImmutable
+    public function getOccurredTime(): \DateTimeImmutable
     {
-        return $this->occurredAt;
+        return $this->occurredTime;
     }
 
-    public function setOccurredAt(\DateTimeImmutable $occurredAt): static
+    public function setOccurredTime(\DateTimeImmutable $occurredTime): void
     {
-        $this->occurredAt = $occurredAt;
-        return $this;
+        $this->occurredTime = $occurredTime;
     }
 
     public function isError(): bool
     {
-        return $this->level === LogLevel::ERROR;
+        return LogLevel::ERROR === $this->level;
     }
 
     public function isWarning(): bool
     {
-        return $this->level === LogLevel::WARNING;
+        return LogLevel::WARNING === $this->level;
     }
 
     public function isInfo(): bool
     {
-        return $this->level === LogLevel::INFO;
+        return LogLevel::INFO === $this->level;
     }
 
     public function isDebug(): bool
     {
-        return $this->level === LogLevel::DEBUG;
+        return LogLevel::DEBUG === $this->level;
     }
 
     /**
@@ -243,7 +257,7 @@ class AcmeOperationLog implements \Stringable
      */
     public function hasRelatedEntity(): bool
     {
-        return $this->entityType !== null && $this->entityId !== null;
+        return null !== $this->entityType && null !== $this->entityId;
     }
 
     /**
@@ -251,7 +265,7 @@ class AcmeOperationLog implements \Stringable
      */
     public function hasHttpRequest(): bool
     {
-        return $this->httpUrl !== null;
+        return null !== $this->httpUrl;
     }
 
     /**
@@ -259,7 +273,7 @@ class AcmeOperationLog implements \Stringable
      */
     public function hasHttpResponse(): bool
     {
-        return $this->httpStatusCode !== null;
+        return null !== $this->httpStatusCode;
     }
 
     /**
@@ -273,7 +287,7 @@ class AcmeOperationLog implements \Stringable
             $description .= " ({$this->entityType}#{$this->entityId})";
         }
 
-        if ($this->durationMs !== null) {
+        if (null !== $this->durationMs) {
             $description .= " ({$this->durationMs}ms)";
         }
 
@@ -282,6 +296,8 @@ class AcmeOperationLog implements \Stringable
 
     /**
      * 创建账户操作日志
+     *
+     * @param array<string, mixed>|null $details
      */
     public static function accountOperation(string $operation, string $message, ?int $accountId = null, ?array $details = null): self
     {
@@ -291,11 +307,14 @@ class AcmeOperationLog implements \Stringable
         $log->setEntityType('Account');
         $log->setEntityId($accountId);
         $log->setContext($details);
+
         return $log;
     }
 
     /**
      * 创建订单操作日志
+     *
+     * @param array<string, mixed>|null $details
      */
     public static function orderOperation(string $operation, string $message, ?int $orderId = null, ?array $details = null): self
     {
@@ -305,11 +324,14 @@ class AcmeOperationLog implements \Stringable
         $log->setEntityType('Order');
         $log->setEntityId($orderId);
         $log->setContext($details);
+
         return $log;
     }
 
     /**
      * 创建质询操作日志
+     *
+     * @param array<string, mixed>|null $details
      */
     public static function challengeOperation(string $operation, string $message, ?int $challengeId = null, ?array $details = null): self
     {
@@ -319,11 +341,14 @@ class AcmeOperationLog implements \Stringable
         $log->setEntityType('Challenge');
         $log->setEntityId($challengeId);
         $log->setContext($details);
+
         return $log;
     }
 
     /**
      * 创建证书操作日志
+     *
+     * @param array<string, mixed>|null $details
      */
     public static function certificateOperation(string $operation, string $message, ?int $certificateId = null, ?array $details = null): self
     {
@@ -333,6 +358,7 @@ class AcmeOperationLog implements \Stringable
         $log->setEntityType('Certificate');
         $log->setEntityId($certificateId);
         $log->setContext($details);
+
         return $log;
     }
 }

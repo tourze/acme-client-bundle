@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\ACMEClientBundle\Enum\OrderStatus;
 use Tourze\ACMEClientBundle\Repository\OrderRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -20,8 +21,6 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
  */
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: 'acme_orders', options: ['comment' => 'ACME 订单表，存储证书订单信息'])]
-#[ORM\Index(columns: ['status'], name: 'idx_order_status')]
-#[ORM\Index(columns: ['expires_time'], name: 'idx_order_expires')]
 class Order implements \Stringable
 {
     use TimestampableAware;
@@ -29,34 +28,46 @@ class Order implements \Stringable
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '主键ID'])]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore-line property.unusedType (Doctrine auto-assigns after persist)
 
-    #[ORM\ManyToOne(targetEntity: Account::class, inversedBy: 'orders')]
+    #[ORM\ManyToOne(targetEntity: Account::class, inversedBy: 'orders', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
-    #[IndexColumn]
+    #[Assert\NotNull]
     private ?Account $account = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, options: ['comment' => '订单在 ACME 服务器上的 URL'])]
+    #[Assert\NotBlank]
+    #[Assert\Url]
+    #[Assert\Length(max: 500)]
     private string $orderUrl;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: OrderStatus::class, options: ['comment' => '订单状态'])]
     #[IndexColumn]
+    #[Assert\NotBlank]
+    #[Assert\Choice(callback: [OrderStatus::class, 'cases'], message: '请选择有效的订单状态')]
     private OrderStatus $status = OrderStatus::PENDING;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '订单过期时间'])]
     #[IndexColumn]
+    #[Assert\Type(type: '\DateTimeImmutable', message: '过期时间必须是有效的日期时间格式')]
     private ?\DateTimeImmutable $expiresTime = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '订单错误信息'])]
+    #[Assert\Length(max: 65535, maxMessage: '错误信息长度不能超过 {{ limit }} 个字符')]
     private ?string $error = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '终结页面URL'])]
+    #[Assert\Url]
+    #[Assert\Length(max: 500)]
     private ?string $finalizeUrl = null;
 
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true, options: ['comment' => '证书下载URL'])]
+    #[Assert\Url]
+    #[Assert\Length(max: 500)]
     private ?string $certificateUrl = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '订单是否有效'])]
+    #[Assert\Type(type: 'bool', message: '有效状态必须是布尔值')]
     private bool $valid = false;
 
     /**
@@ -76,15 +87,18 @@ class Order implements \Stringable
     private Collection $authorizations;
 
     /**
-     * 关联的证书
+     * 关联的证书集合
+     *
+     * @var Collection<int, Certificate>
      */
-    #[ORM\OneToOne(mappedBy: 'order', targetEntity: Certificate::class, cascade: ['persist', 'remove'])]
-    private ?Certificate $certificate = null;
+    #[ORM\OneToMany(mappedBy: 'order', targetEntity: Certificate::class, cascade: ['persist', 'remove'])]
+    private Collection $certificates;
 
     public function __construct()
     {
         $this->orderIdentifiers = new ArrayCollection();
         $this->authorizations = new ArrayCollection();
+        $this->certificates = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -102,10 +116,9 @@ class Order implements \Stringable
         return $this->account;
     }
 
-    public function setAccount(?Account $account): static
+    public function setAccount(?Account $account): void
     {
         $this->account = $account;
-        return $this;
     }
 
     public function getOrderUrl(): string
@@ -113,10 +126,9 @@ class Order implements \Stringable
         return $this->orderUrl;
     }
 
-    public function setOrderUrl(string $orderUrl): static
+    public function setOrderUrl(string $orderUrl): void
     {
         $this->orderUrl = $orderUrl;
-        return $this;
     }
 
     public function getStatus(): OrderStatus
@@ -124,11 +136,10 @@ class Order implements \Stringable
         return $this->status;
     }
 
-    public function setStatus(OrderStatus $status): static
+    public function setStatus(OrderStatus $status): void
     {
         $this->status = $status;
-        $this->valid = ($status === OrderStatus::VALID);
-        return $this;
+        $this->valid = (OrderStatus::VALID === $status);
     }
 
     public function getExpiresTime(): ?\DateTimeImmutable
@@ -136,10 +147,9 @@ class Order implements \Stringable
         return $this->expiresTime;
     }
 
-    public function setExpiresTime(?\DateTimeImmutable $expiresTime): static
+    public function setExpiresTime(?\DateTimeImmutable $expiresTime): void
     {
         $this->expiresTime = $expiresTime;
-        return $this;
     }
 
     public function getError(): ?string
@@ -147,10 +157,9 @@ class Order implements \Stringable
         return $this->error;
     }
 
-    public function setError(?string $error): static
+    public function setError(?string $error): void
     {
         $this->error = $error;
-        return $this;
     }
 
     public function getFinalizeUrl(): ?string
@@ -158,10 +167,9 @@ class Order implements \Stringable
         return $this->finalizeUrl;
     }
 
-    public function setFinalizeUrl(?string $finalizeUrl): static
+    public function setFinalizeUrl(?string $finalizeUrl): void
     {
         $this->finalizeUrl = $finalizeUrl;
-        return $this;
     }
 
     public function getCertificateUrl(): ?string
@@ -169,10 +177,9 @@ class Order implements \Stringable
         return $this->certificateUrl;
     }
 
-    public function setCertificateUrl(?string $certificateUrl): static
+    public function setCertificateUrl(?string $certificateUrl): void
     {
         $this->certificateUrl = $certificateUrl;
-        return $this;
     }
 
     public function isValid(): bool
@@ -180,10 +187,9 @@ class Order implements \Stringable
         return $this->valid;
     }
 
-    public function setValid(bool $valid): static
+    public function setValid(bool $valid): void
     {
         $this->valid = $valid;
-        return $this;
     }
 
     /**
@@ -194,25 +200,21 @@ class Order implements \Stringable
         return $this->orderIdentifiers;
     }
 
-    public function addOrderIdentifier(Identifier $identifier): static
+    public function addOrderIdentifier(Identifier $identifier): void
     {
         if (!$this->orderIdentifiers->contains($identifier)) {
             $this->orderIdentifiers->add($identifier);
             $identifier->setOrder($this);
         }
-
-        return $this;
     }
 
-    public function removeOrderIdentifier(Identifier $identifier): static
+    public function removeOrderIdentifier(Identifier $identifier): void
     {
         if ($this->orderIdentifiers->removeElement($identifier)) {
             if ($identifier->getOrder() === $this) {
                 $identifier->setOrder(null);
             }
         }
-
-        return $this;
     }
 
     /**
@@ -223,45 +225,66 @@ class Order implements \Stringable
         return $this->authorizations;
     }
 
-    public function addAuthorization(Authorization $authorization): static
+    public function addAuthorization(Authorization $authorization): void
     {
         if (!$this->authorizations->contains($authorization)) {
             $this->authorizations->add($authorization);
             $authorization->setOrder($this);
         }
-
-        return $this;
     }
 
-    public function removeAuthorization(Authorization $authorization): static
+    public function removeAuthorization(Authorization $authorization): void
     {
         if ($this->authorizations->removeElement($authorization)) {
             if ($authorization->getOrder() === $this) {
                 $authorization->setOrder(null);
             }
         }
+    }
 
-        return $this;
+    /**
+     * @return Collection<int, Certificate>
+     */
+    public function getCertificates(): Collection
+    {
+        return $this->certificates;
+    }
+
+    public function addCertificate(Certificate $certificate): void
+    {
+        if (!$this->certificates->contains($certificate)) {
+            $this->certificates->add($certificate);
+            $certificate->setOrder($this);
+        }
+    }
+
+    public function removeCertificate(Certificate $certificate): void
+    {
+        if ($this->certificates->removeElement($certificate)) {
+            if ($certificate->getOrder() === $this) {
+                $certificate->setOrder(null);
+            }
+        }
     }
 
     public function getCertificate(): ?Certificate
     {
-        return $this->certificate;
+        $certificate = $this->certificates->first();
+
+        return false !== $certificate ? $certificate : null;
     }
 
-    public function setCertificate(?Certificate $certificate): static
+    public function setCertificate(?Certificate $certificate): void
     {
-        if ($certificate === null && $this->certificate !== null) {
-            $this->certificate->setOrder(null);
+        // 清空所有现有证书
+        foreach ($this->certificates as $existingCertificate) {
+            $this->removeCertificate($existingCertificate);
         }
 
-        if ($certificate !== null && $certificate->getOrder() !== $this) {
-            $certificate->setOrder($this);
+        // 添加新证书
+        if (null !== $certificate) {
+            $this->addCertificate($certificate);
         }
-
-        $this->certificate = $certificate;
-
-        return $this;
     }
 
     /**
@@ -269,7 +292,7 @@ class Order implements \Stringable
      */
     public function isExpired(): bool
     {
-        return $this->expiresTime !== null && $this->expiresTime < new \DateTimeImmutable();
+        return null !== $this->expiresTime && $this->expiresTime < new \DateTimeImmutable();
     }
 
     /**
@@ -277,7 +300,7 @@ class Order implements \Stringable
      */
     public function isReady(): bool
     {
-        return $this->status === OrderStatus::READY;
+        return OrderStatus::READY === $this->status;
     }
 
     /**
@@ -285,7 +308,7 @@ class Order implements \Stringable
      */
     public function isInvalid(): bool
     {
-        return $this->status === OrderStatus::INVALID;
+        return OrderStatus::INVALID === $this->status;
     }
 
     /**
@@ -298,6 +321,7 @@ class Order implements \Stringable
                 return false;
             }
         }
+
         return true;
     }
 }

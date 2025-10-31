@@ -7,14 +7,17 @@ namespace Tourze\ACMEClientBundle\Exception;
 /**
  * ACME 验证异常
  */
-class AcmeValidationException extends AcmeClientException
+class AcmeValidationException extends AbstractAcmeException
 {
+    /**
+     * @param array<string, mixed>|null $acmeErrorDetails
+     */
     public function __construct(
         string $message = 'ACME validation failed',
         int $code = 400,
         ?\Throwable $previous = null,
         ?string $acmeErrorType = 'malformed',
-        ?array $acmeErrorDetails = null
+        ?array $acmeErrorDetails = null,
     ) {
         parent::__construct($message, $code, $previous, $acmeErrorType, $acmeErrorDetails);
     }
