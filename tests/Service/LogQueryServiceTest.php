@@ -58,8 +58,6 @@ final class LogQueryServiceTest extends AbstractIntegrationTestCase
         // 由于没有真实数据，我们期望返回空的统计信息
         $since = new \DateTimeImmutable('+1 day'); // 使用未来时间确保没有数据
         $result = $this->logQueryService->getExceptionStatistics($since);
-        // 验证返回的是数组，但不假设它是空的，因为服务可能有默认行为
-        $this->assertIsArray($result);
         // getExceptionStats 返回的是包含 exceptionClass 和 count 的数组列表
         foreach ($result as $stat) {
             $this->assertIsArray($stat);
@@ -74,8 +72,6 @@ final class LogQueryServiceTest extends AbstractIntegrationTestCase
         // 由于没有真实数据，我们期望返回清理的数量
         $result = $this->logQueryService->cleanupLogs(30);
         $this->assertCount(2, $result);
-        $this->assertIsInt($result[0]);
-        $this->assertIsInt($result[1]);
     }
 
     public function testCleanupLogsInvalidDays(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Repository;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Entity\Account;
@@ -19,6 +20,7 @@ use Tourze\ACMEClientBundle\Repository\ChallengeRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<Challenge>
  * @internal
  */
 #[CoversClass(ChallengeRepository::class)]
@@ -83,7 +85,6 @@ final class ChallengeRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(ChallengeRepository::class);
         $results = $repository->findAll();
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Challenge::class, $result);
         }
@@ -109,7 +110,6 @@ final class ChallengeRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(ChallengeRepository::class);
         $results = $repository->findBy(['type' => ChallengeType::DNS_01]);
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Challenge::class, $result);
             $this->assertSame(ChallengeType::DNS_01, $result->getType());
@@ -121,7 +121,6 @@ final class ChallengeRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(ChallengeRepository::class);
         $results = $repository->findBy(['status' => ChallengeStatus::PENDING]);
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Challenge::class, $result);
             $this->assertSame(ChallengeStatus::PENDING, $result->getStatus());
@@ -350,7 +349,7 @@ final class ChallengeRepositoryTest extends AbstractRepositoryTestCase
         return $entity;
     }
 
-    protected function getRepository(): ChallengeRepository
+    protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(ChallengeRepository::class);
     }

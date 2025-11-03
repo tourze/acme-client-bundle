@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Repository;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Entity\Account;
@@ -16,6 +17,7 @@ use Tourze\ACMEClientBundle\Repository\OrderRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<Identifier>
  * @internal
  */
 #[CoversClass(IdentifierRepository::class)]
@@ -60,7 +62,6 @@ final class IdentifierRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(IdentifierRepository::class);
         $results = $repository->findAll();
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Identifier::class, $result);
         }
@@ -197,7 +198,7 @@ final class IdentifierRepositoryTest extends AbstractRepositoryTestCase
         return $entity;
     }
 
-    protected function getRepository(): IdentifierRepository
+    protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(IdentifierRepository::class);
     }

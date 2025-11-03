@@ -18,6 +18,7 @@ use Tourze\ACMEClientBundle\Repository\OrderRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<Certificate>
  * @internal
  */
 #[CoversClass(CertificateRepository::class)]
@@ -34,7 +35,6 @@ final class CertificateRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(CertificateRepository::class);
         $results = $repository->findAll();
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Certificate::class, $result);
         }
@@ -298,9 +298,6 @@ final class CertificateRepositoryTest extends AbstractRepositoryTestCase
         return $entity;
     }
 
-    /**
-     * @return ServiceEntityRepository<Certificate>
-     */
     protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(CertificateRepository::class);

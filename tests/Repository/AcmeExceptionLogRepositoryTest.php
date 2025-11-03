@@ -12,6 +12,7 @@ use Tourze\ACMEClientBundle\Repository\AcmeExceptionLogRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<AcmeExceptionLog>
  * @internal
  */
 #[CoversClass(AcmeExceptionLogRepository::class)]
@@ -27,8 +28,8 @@ final class AcmeExceptionLogRepositoryTest extends AbstractRepositoryTestCase
     {
         $repository = self::getService(AcmeExceptionLogRepository::class);
         $results = $repository->findAll();
-        // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
+        // Verify we have some results from fixtures
+        $this->assertNotEmpty($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(AcmeExceptionLog::class, $result);
         }

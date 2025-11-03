@@ -13,6 +13,7 @@ use Tourze\ACMEClientBundle\Repository\AcmeOperationLogRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<AcmeOperationLog>
  * @internal
  */
 #[CoversClass(AcmeOperationLogRepository::class)]
@@ -29,7 +30,6 @@ final class AcmeOperationLogRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(AcmeOperationLogRepository::class);
         $results = $repository->findAll();
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(AcmeOperationLog::class, $result);
         }
@@ -332,9 +332,6 @@ final class AcmeOperationLogRepositoryTest extends AbstractRepositoryTestCase
         $this->assertGreaterThanOrEqual(1, $count);
     }
 
-    /**
-     * @return ServiceEntityRepository<AcmeOperationLog>
-     */
     protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(AcmeOperationLogRepository::class);

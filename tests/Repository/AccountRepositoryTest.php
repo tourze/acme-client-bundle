@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Repository;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Entity\Account;
@@ -12,6 +13,7 @@ use Tourze\ACMEClientBundle\Repository\AccountRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<Account>
  * @internal
  */
 #[CoversClass(AccountRepository::class)]
@@ -204,9 +206,9 @@ final class AccountRepositoryTest extends AbstractRepositoryTestCase
     }
 
     /**
-     * @return AccountRepository
+     * @return ServiceEntityRepository<Account>
      */
-    protected function getRepository(): AccountRepository
+    protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(AccountRepository::class);
     }

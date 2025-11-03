@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Repository;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Entity\Account;
@@ -19,6 +20,7 @@ use Tourze\ACMEClientBundle\Repository\OrderRepository;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractRepositoryTestCase;
 
 /**
+ * @template-extends AbstractRepositoryTestCase<Authorization>
  * @internal
  */
 #[CoversClass(AuthorizationRepository::class)]
@@ -65,7 +67,6 @@ final class AuthorizationRepositoryTest extends AbstractRepositoryTestCase
         $repository = self::getService(AuthorizationRepository::class);
         $results = $repository->findAll();
         // Type is guaranteed by repository method signature
-        $this->assertIsArray($results);
         foreach ($results as $result) {
             $this->assertInstanceOf(Authorization::class, $result);
         }
@@ -319,10 +320,7 @@ final class AuthorizationRepositoryTest extends AbstractRepositoryTestCase
         $this->assertSame($initialCount + 1, $newCount);
     }
 
-    /**
-     * @return AuthorizationRepository
-     */
-    protected function getRepository(): AuthorizationRepository
+    protected function getRepository(): ServiceEntityRepository
     {
         return self::getService(AuthorizationRepository::class);
     }
