@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\ACMEClientBundle\Tests\Controller\Admin;
 
+use Doctrine\Persistence\ObjectManager;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
@@ -11,6 +12,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Controller\Admin\AcmeOperationLogCrudController;
+use Tourze\ACMEClientBundle\DataFixtures\AcmeOperationLogFixtures;
 use Tourze\ACMEClientBundle\Entity\AcmeOperationLog;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
 use Tourze\PHPUnitSymfonyWebTest\AbstractEasyAdminControllerTestCase;
@@ -24,6 +26,22 @@ use Tourze\PHPUnitSymfonyWebTest\AbstractEasyAdminControllerTestCase;
 #[RunTestsInSeparateProcesses]
 final class AcmeOperationLogCrudControllerTest extends AbstractEasyAdminControllerTestCase
 {
+    protected function afterEasyAdminSetUp(): void
+    {
+        // 确保测试数据存在
+        $container = self::getContainer();
+        /** @var ObjectManager $entityManager */
+        $entityManager = $container->get('doctrine.orm.entity_manager');
+
+        // 检查是否已有数据，如果没有则加载 fixtures
+        $repository = $entityManager->getRepository(AcmeOperationLog::class);
+        $existingLogs = method_exists($repository, 'count') ? $repository->count() : count($repository->findAll());
+        if (0 === $existingLogs) {
+            $fixtures = new AcmeOperationLogFixtures();
+            $fixtures->load($entityManager);
+        }
+    }
+
     public function testControllerIsInstantiable(): void
     {
         $reflection = new \ReflectionClass(AcmeOperationLogCrudController::class);
@@ -100,7 +118,7 @@ final class AcmeOperationLogCrudControllerTest extends AbstractEasyAdminControll
     {
         $this->assertEquals(
             'Tourze\ACMEClientBundle\Controller\Admin',
-            (new \ReflectionClass(AcmeOperationLogCrudController::class))->getNamespaceName()
+            new \ReflectionClass(AcmeOperationLogCrudController::class)->getNamespaceName()
         );
     }
 
