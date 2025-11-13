@@ -59,10 +59,13 @@ final class LogQueryServiceTest extends AbstractIntegrationTestCase
         $since = new \DateTimeImmutable('+1 day'); // 使用未来时间确保没有数据
         $result = $this->logQueryService->getExceptionStatistics($since);
         // getExceptionStats 返回的是包含 exceptionClass 和 count 的数组列表
-        foreach ($result as $stat) {
-            $this->assertIsArray($stat);
-            $this->assertArrayHasKey('exceptionClass', $stat);
-            $this->assertArrayHasKey('count', $stat);
+        $this->assertIsArray($result);
+        if (count($result) > 0) {
+            foreach ($result as $stat) {
+                $this->assertIsArray($stat);
+                $this->assertArrayHasKey('exceptionClass', $stat);
+                $this->assertArrayHasKey('count', $stat);
+            }
         }
     }
 
