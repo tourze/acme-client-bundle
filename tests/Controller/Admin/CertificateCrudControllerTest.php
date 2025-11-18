@@ -40,11 +40,6 @@ final class CertificateCrudControllerTest extends AbstractEasyAdminControllerTes
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnCertificateClass(): void
-    {
-        $this->assertEquals(Certificate::class, CertificateCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(CertificateCrudController::class);

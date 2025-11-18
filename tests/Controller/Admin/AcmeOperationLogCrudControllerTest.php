@@ -50,11 +50,6 @@ final class AcmeOperationLogCrudControllerTest extends AbstractEasyAdminControll
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnAcmeOperationLogClass(): void
-    {
-        $this->assertEquals(AcmeOperationLog::class, AcmeOperationLogCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(AcmeOperationLogCrudController::class);

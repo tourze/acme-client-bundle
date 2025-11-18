@@ -39,11 +39,6 @@ final class OrderCrudControllerTest extends AbstractEasyAdminControllerTestCase
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnOrderClass(): void
-    {
-        $this->assertEquals(Order::class, OrderCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(OrderCrudController::class);

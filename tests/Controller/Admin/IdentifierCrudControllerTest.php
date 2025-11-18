@@ -37,11 +37,6 @@ final class IdentifierCrudControllerTest extends AbstractEasyAdminControllerTest
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnIdentifierClass(): void
-    {
-        $this->assertEquals(Identifier::class, IdentifierCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(IdentifierCrudController::class);

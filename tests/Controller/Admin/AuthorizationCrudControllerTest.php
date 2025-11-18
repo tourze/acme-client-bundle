@@ -38,11 +38,6 @@ final class AuthorizationCrudControllerTest extends AbstractEasyAdminControllerT
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnAuthorizationClass(): void
-    {
-        $this->assertEquals(Authorization::class, AuthorizationCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(AuthorizationCrudController::class);

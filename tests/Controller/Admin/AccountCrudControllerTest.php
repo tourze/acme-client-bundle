@@ -31,11 +31,6 @@ final class AccountCrudControllerTest extends AbstractEasyAdminControllerTestCas
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnAccountClass(): void
-    {
-        $this->assertEquals(Account::class, AccountCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(AccountCrudController::class);

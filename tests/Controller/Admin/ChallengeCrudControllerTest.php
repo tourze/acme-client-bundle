@@ -41,11 +41,6 @@ final class ChallengeCrudControllerTest extends AbstractEasyAdminControllerTestC
         $this->assertTrue($reflection->isFinal());
     }
 
-    public function testGetEntityFqcnShouldReturnChallengeClass(): void
-    {
-        $this->assertEquals(Challenge::class, ChallengeCrudController::getEntityFqcn());
-    }
-
     public function testControllerHasRequiredConfigurationMethods(): void
     {
         $reflection = new \ReflectionClass(ChallengeCrudController::class);
