@@ -37,8 +37,7 @@ final class ChallengeServiceTest extends AbstractIntegrationTestCase
 {
     private ChallengeService $service;
 
-    /** @var AcmeApiClient&MockObject */
-    private AcmeApiClient $apiClient;
+    private MockObject $apiClient;
 
     protected function onSetUp(): void
     {

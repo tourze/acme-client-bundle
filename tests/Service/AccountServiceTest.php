@@ -27,8 +27,8 @@ final class AccountServiceTest extends AbstractIntegrationTestCase
 {
     private AccountService $service;
 
-    /** @var AcmeApiClient&MockObject */
-    private AcmeApiClient $apiClient;
+    /** @var MockObject */
+    private $apiClient;
 
     protected function onSetUp(): void
     {

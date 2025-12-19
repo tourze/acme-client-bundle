@@ -10,7 +10,7 @@ use Tourze\ACMEClientBundle\Contract\QueryHandlerInterface;
 use Tourze\ACMEClientBundle\Service\LogDisplayService;
 use Tourze\ACMEClientBundle\Service\LogQueryService;
 
-class CleanupHandler implements QueryHandlerInterface
+final class CleanupHandler implements QueryHandlerInterface
 {
     public function __construct(
         private readonly LogQueryService $logQueryService,

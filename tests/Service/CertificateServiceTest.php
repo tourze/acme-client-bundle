@@ -29,8 +29,7 @@ final class CertificateServiceTest extends AbstractIntegrationTestCase
 {
     private CertificateService $service;
 
-    /** @var AcmeApiClient&MockObject */
-    private AcmeApiClient $apiClient;
+    private MockObject $apiClient;
 
     protected function onSetUp(): void
     {

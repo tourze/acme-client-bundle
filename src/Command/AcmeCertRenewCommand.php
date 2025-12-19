@@ -39,7 +39,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
       - 使用 --dry-run 选项可以查看哪些证书需要续订，但不会实际执行
 
     TXT)]
-class AcmeCertRenewCommand extends Command
+final class AcmeCertRenewCommand extends Command
 {
     public const NAME = 'acme:cert:renew';
 

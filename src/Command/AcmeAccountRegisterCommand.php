@@ -30,7 +30,7 @@ use Tourze\ACMEClientBundle\Service\AcmeLogService;
       --directory-url=https://acme-v02.api.letsencrypt.org/directory
 
     TXT)]
-class AcmeAccountRegisterCommand extends Command
+final class AcmeAccountRegisterCommand extends Command
 {
     public const NAME = 'acme:account:register';
 

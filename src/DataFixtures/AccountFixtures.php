@@ -6,39 +6,41 @@ namespace Tourze\ACMEClientBundle\DataFixtures;
 
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
+use Symfony\Component\DependencyInjection\Attribute\When;
 use Tourze\ACMEClientBundle\Entity\Account;
 use Tourze\ACMEClientBundle\Enum\AccountStatus;
 
+#[When(env: 'test')]
+#[When(env: 'dev')]
 class AccountFixtures extends Fixture
 {
-    public const ACCOUNT_STAGING_REFERENCE = 'account-staging';
-    public const ACCOUNT_PROD_REFERENCE = 'account-prod';
+    public const ACCOUNT_REFERENCE = 'account';
 
     public function load(ObjectManager $manager): void
     {
-        // 创建测试用 ACME 账户
-        $account1 = new Account();
-        $account1->setAcmeServerUrl('https://acme-staging-v02.api.letsencrypt.org/directory');
-        $account1->setPrivateKey('-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----');
-        $account1->setPublicKeyJwk('{"kty":"RSA","n":"test-public-key-1","e":"AQAB"}');
-        $account1->setStatus(AccountStatus::VALID);
-        $account1->setContacts(['mailto:test@acme-test.tourze.dev']);
-        $account1->setTermsOfServiceAgreed(true);
+        $account = new Account();
+        $account->setAcmeServerUrl('https://acme-staging-v02.api.letsencrypt.org/directory');
+        $account->setPrivateKey($this->generateTestPrivateKey());
+        $account->setPublicKeyJwk('{"kty":"RSA","use":"sig","kid":"test-key","n":"test","e":"AQAB"}');
+        $account->setAccountUrl('https://acme-staging-v02.api.letsencrypt.org/acme/acct/123456');
+        $account->setStatus(AccountStatus::VALID);
+        $account->setContacts(['mailto:test@example.com']);
+        $account->setTermsOfServiceAgreed(true);
 
-        $account2 = new Account();
-        $account2->setAcmeServerUrl('https://acme-v02.api.letsencrypt.org/directory');
-        $account2->setPrivateKey('-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQD...\n-----END PRIVATE KEY-----');
-        $account2->setPublicKeyJwk('{"kty":"RSA","n":"test-public-key-2","e":"AQAB"}');
-        $account2->setStatus(AccountStatus::VALID);
-        $account2->setContacts(['mailto:prod@acme-prod.tourze.dev']);
-        $account2->setTermsOfServiceAgreed(true);
+        $manager->persist($account);
+        $this->addReference(self::ACCOUNT_REFERENCE, $account);
 
-        $manager->persist($account1);
-        $manager->persist($account2);
         $manager->flush();
+    }
 
-        // 保存引用供其他 Fixtures 使用
-        $this->addReference(self::ACCOUNT_STAGING_REFERENCE, $account1);
-        $this->addReference(self::ACCOUNT_PROD_REFERENCE, $account2);
+    private function generateTestPrivateKey(): string
+    {
+        // 使用固定的测试私钥，避免每次运行时生成新的密钥
+        return <<<'PEM'
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy0AHB7MmE8qTCXBgVMY0vR
+test_key_for_fixtures_only_do_not_use_in_production
+-----END RSA PRIVATE KEY-----
+PEM;
     }
 }

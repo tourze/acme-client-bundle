@@ -5,15 +5,22 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Service\CertificateQueryService;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
 /**
  * @internal
  */
 #[CoversClass(CertificateQueryService::class)]
-final class CertificateQueryServiceTest extends TestCase
+#[RunTestsInSeparateProcesses]
+final class CertificateQueryServiceTest extends AbstractIntegrationTestCase
 {
+    protected function onSetUp(): void
+    {
+        // 无需设置
+    }
+
     public function testPlaceholder(): void
     {
         // This test class is a placeholder.

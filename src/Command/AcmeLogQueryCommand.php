@@ -45,7 +45,7 @@ use Tourze\ACMEClientBundle\Exception\QueryHandlerNotFoundException;
       - certificate (证书)
 
     TXT)]
-class AcmeLogQueryCommand extends Command
+final class AcmeLogQueryCommand extends Command
 {
     public const NAME = 'acme:log:query';
 

@@ -37,8 +37,7 @@ final class OrderServiceTest extends AbstractIntegrationTestCase
 {
     private OrderService $service;
 
-    /** @var AcmeApiClient&MockObject */
-    private AcmeApiClient $apiClient;
+    private MockObject $apiClient;
 
     protected function onSetUp(): void
     {

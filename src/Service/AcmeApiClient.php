@@ -26,7 +26,7 @@ use Tourze\ACMEClientBundle\Exception\AcmeValidationException;
  */
 #[Autoconfigure(public: true)]
 #[WithMonologChannel(channel: 'acme_client')]
-class AcmeApiClient
+final class AcmeApiClient
 {
     /** @var array<string, mixed>|null */
     private ?array $directory = null;
@@ -482,7 +482,7 @@ class AcmeApiClient
      */
     private function updateNonceFromResponse(ResponseInterface $response): void
     {
-        $headers = $response->getHeaders();
+        $headers = $response->getHeaders(false);
         if (isset($headers['replay-nonce'][0])) {
             $this->currentNonce = $headers['replay-nonce'][0];
         }

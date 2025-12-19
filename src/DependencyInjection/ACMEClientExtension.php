@@ -4,7 +4,7 @@ namespace Tourze\ACMEClientBundle\DependencyInjection;
 
 use Tourze\SymfonyDependencyServiceLoader\AutoExtension;
 
-class ACMEClientExtension extends AutoExtension
+final class ACMEClientExtension extends AutoExtension
 {
     protected function getConfigDir(): string
     {

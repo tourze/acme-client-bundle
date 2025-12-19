@@ -41,7 +41,7 @@ use Tourze\ACMEClientBundle\Service\OrderService;
       - 使用 --auto-download 选项会在验证成功后自动下载证书
 
     TXT)]
-class AcmeOrderCreateCommand extends Command
+final class AcmeOrderCreateCommand extends Command
 {
     public const NAME = 'acme:order:create';
 

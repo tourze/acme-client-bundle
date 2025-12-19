@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Tourze\ACMEClientBundle\Tests\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Service\OrderStatusService;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
 /**
  * @internal
@@ -15,8 +16,14 @@ use Tourze\ACMEClientBundle\Service\OrderStatusService;
  * @see OrderServiceTest
  */
 #[CoversClass(OrderStatusService::class)]
-final class OrderStatusServiceTest extends TestCase
+#[RunTestsInSeparateProcesses]
+final class OrderStatusServiceTest extends AbstractIntegrationTestCase
 {
+    protected function onSetUp(): void
+    {
+        // 无需设置
+    }
+
     public function testCoveredByIntegrationTests(): void
     {
         self::markTestSkipped('OrderStatusService is covered by OrderServiceTest integration tests');

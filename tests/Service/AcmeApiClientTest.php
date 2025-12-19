@@ -6,9 +6,8 @@ namespace Tourze\ACMEClientBundle\Tests\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use PHPUnit\Framework\MockObject\MockObject;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
 use Tourze\ACMEClientBundle\Exception\AcmeValidationException;
 use Tourze\ACMEClientBundle\Exception\CertificateGenerationException;
@@ -16,67 +15,88 @@ use Tourze\ACMEClientBundle\Service\AcmeApiClient;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
 /**
+ * AcmeApiClient 集成测试
+ *
+ * 使用 MockHttpClient 模拟 HTTP 响应，因为：
+ * 1. 测试需要隔离外部 ACME 服务器调用
+ * 2. Mock 网络请求是合理的测试实践
+ *
  * @internal
  */
 #[CoversClass(AcmeApiClient::class)]
 #[RunTestsInSeparateProcesses]
 final class AcmeApiClientTest extends AbstractIntegrationTestCase
 {
-    private AcmeApiClient $client;
-
-    /** @var HttpClientInterface&MockObject */
-    private HttpClientInterface $httpClient;
-
     private string $directoryUrl = 'https://acme-staging-v02.api.letsencrypt.org/directory';
+    private MockHttpClient $mockHttpClient;
+    private AcmeApiClient $client;
 
     protected function onSetUp(): void
     {
-        // 子类自定义 setUp 逻辑
+        // 获取容器中的 MockHttpClient 实例（使用测试服务 ID）
+        $mockHttpClient = self::getServiceById('Test.MockHttpClient');
+        if (!$mockHttpClient instanceof MockHttpClient) {
+            throw new \RuntimeException('Expected MockHttpClient instance');
+        }
+        $this->mockHttpClient = $mockHttpClient;
+
+        // 获取使用该 MockHttpClient 的 AcmeApiClient 服务（使用测试服务 ID）
+        $client = self::getServiceById('Test.AcmeApiClient');
+        if (!$client instanceof AcmeApiClient) {
+            throw new \RuntimeException('Expected AcmeApiClient instance');
+        }
+        $this->client = $client;
     }
 
-    private function initializeMocks(): void
+    /**
+     * 使用响应数组设置 MockHttpClient
+     *
+     * @param MockResponse[] $responses
+     */
+    private function setMockResponses(array $responses): void
     {
-        /*
-         * 使用接口 HttpClientInterface 的 Mock 对象
-         * 原因：HttpClientInterface 是标准接口，有对应的接口抽象
-         * 合理性：在测试中需要隔离外部 HTTP 调用，使用 Mock 是必要的测试实践
-         */
-        $this->httpClient = $this->createMock(HttpClientInterface::class);
-        self::getContainer()->set(HttpClientInterface::class, $this->httpClient);
+        $index = 0;
+        $this->mockHttpClient->setResponseFactory(function () use ($responses, &$index) {
+            if ($index < count($responses)) {
+                return $responses[$index++];
+            }
 
-        $this->client = self::getService(AcmeApiClient::class);
+            return new MockResponse('', ['http_code' => 500]);
+        });
+    }
+
+    /**
+     * 使用回调函数设置 MockHttpClient
+     *
+     * @param callable $callback 接收 (string $method, string $url, array $options) 返回 MockResponse
+     */
+    private function setMockCallback(callable $callback): void
+    {
+        $this->mockHttpClient->setResponseFactory($callback);
     }
 
     public function testConstructor(): void
     {
-        $this->initializeMocks();
         $this->assertInstanceOf(AcmeApiClient::class, $this->client);
     }
 
     public function testGetDirectory(): void
     {
-        $this->initializeMocks();
         $expectedDirectory = [
             'newAccount' => 'https://acme-v02.api.letsencrypt.org/acme/new-acct',
             'newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce',
             'newOrder' => 'https://acme-v02.api.letsencrypt.org/acme/new-order',
         ];
 
-        $response = $this->createMock(ResponseInterface::class);
-        $response->expects($this->once())
-            ->method('toArray')
-            ->willReturn($expectedDirectory)
-        ;
-        $response->expects($this->any())
-            ->method('getStatusCode')
-            ->willReturn(200)
-        ;
+        $this->setMockCallback(function (string $method, string $url) use ($expectedDirectory) {
+            $this->assertEquals('GET', $method);
+            $this->assertEquals($this->directoryUrl, $url);
 
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->with('GET', $this->directoryUrl)
-            ->willReturn($response)
-        ;
+            return new MockResponse(json_encode($expectedDirectory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]);
+        });
 
         $result = $this->client->getDirectory();
 
@@ -85,21 +105,19 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGetDirectoryCached(): void
     {
-        $this->initializeMocks();
         $expectedDirectory = [
             'newAccount' => 'https://acme-v02.api.letsencrypt.org/acme/new-acct',
         ];
 
-        $response = $this->createMock(ResponseInterface::class);
-        $response->expects($this->once())
-            ->method('toArray')
-            ->willReturn($expectedDirectory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function () use ($expectedDirectory, &$callCount) {
+            ++$callCount;
 
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($response)
-        ;
+            return new MockResponse(json_encode($expectedDirectory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]);
+        });
 
         // 第一次调用
         $result1 = $this->client->getDirectory();
@@ -108,15 +126,15 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
         $this->assertEquals($expectedDirectory, $result1);
         $this->assertEquals($expectedDirectory, $result2);
+        // 验证只调用了一次 HTTP 请求（缓存生效）
+        $this->assertEquals(1, $callCount);
     }
 
     public function testGetDirectoryFailure(): void
     {
-        $this->initializeMocks();
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willThrowException(new \RuntimeException('Network error'))
-        ;
+        $this->setMockCallback(function () {
+            throw new \RuntimeException('Network error');
+        });
 
         $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('Failed to fetch ACME directory: Network error');
@@ -126,28 +144,34 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGetNonce(): void
     {
-        $this->initializeMocks();
         $expectedNonce = 'test-nonce-123';
-        $directory = ['newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce'];
+        $directory = [
+            'newAccount' => 'https://acme-v02.api.letsencrypt.org/acme/new-acct',
+            'newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce',
+        ];
 
-        // Mock directory response
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function (string $method, string $url) use ($directory, $expectedNonce, &$callCount) {
+            ++$callCount;
 
-        // Mock nonce response
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => [$expectedNonce]])
-        ;
+            if (1 === $callCount) {
+                // Directory request
+                $this->assertEquals('GET', $method);
 
-        $this->httpClient->expects($this->exactly(2))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse)
-        ;
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
+
+            // Nonce request (HEAD)
+            $this->assertEquals('HEAD', $method);
+
+            return new MockResponse('', [
+                'http_code' => 200,
+                'response_headers' => ['replay-nonce' => $expectedNonce],
+            ]);
+        });
 
         $result = $this->client->getNonce();
 
@@ -156,19 +180,14 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGetNonceNoNewNonceUrl(): void
     {
-        $this->initializeMocks();
         $directory = []; // 没有 newNonce URL
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
-
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($directoryResponse)
-        ;
+        $this->setMockResponses([
+            new MockResponse(json_encode($directory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+        ]);
 
         $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('newNonce URL not found in directory');
@@ -178,25 +197,19 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGetNonceNoNonceInResponse(): void
     {
-        $this->initializeMocks();
         $directory = ['newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce'];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
-
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn([]) // 没有 nonce
-        ;
-
-        $this->httpClient->expects($this->exactly(2))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse)
-        ;
+        $this->setMockResponses([
+            // Directory response
+            new MockResponse(json_encode($directory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+            // Nonce response without Replay-Nonce header
+            new MockResponse('', [
+                'http_code' => 200,
+            ]),
+        ]);
 
         $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('No nonce received from server');
@@ -206,25 +219,18 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGet(): void
     {
-        $this->initializeMocks();
         $url = 'https://example.com/test';
         $expectedData = ['status' => 'valid'];
 
-        $response = $this->createMock(ResponseInterface::class);
-        $response->expects($this->once())
-            ->method('toArray')
-            ->willReturn($expectedData)
-        ;
-        $response->expects($this->any())
-            ->method('getStatusCode')
-            ->willReturn(200)
-        ;
+        $this->setMockCallback(function (string $method, string $requestUrl) use ($url, $expectedData) {
+            $this->assertEquals('GET', $method);
+            $this->assertEquals($url, $requestUrl);
 
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->with('GET', $url)
-            ->willReturn($response)
-        ;
+            return new MockResponse(json_encode($expectedData), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]);
+        });
 
         $result = $this->client->get($url);
 
@@ -233,13 +239,11 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testGetFailure(): void
     {
-        $this->initializeMocks();
         $url = 'https://example.com/test';
 
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willThrowException(new \RuntimeException('HTTP error'))
-        ;
+        $this->setMockCallback(function () {
+            throw new \RuntimeException('HTTP error');
+        });
 
         $this->expectException(AbstractAcmeException::class);
 
@@ -248,19 +252,14 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testPostWithInvalidUrl(): void
     {
-        $this->initializeMocks();
         $directory = ['newAccount' => 'https://acme-v02.api.letsencrypt.org/acme/new-acct'];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
-
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($directoryResponse)
-        ;
+        $this->setMockResponses([
+            new MockResponse(json_encode($directory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+        ]);
 
         $this->expectException(AcmeValidationException::class);
         $this->expectExceptionMessage('Invalid URL: invalid-url');
@@ -270,29 +269,30 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testBusinessScenarioDirectoryAndNonce(): void
     {
-        $this->initializeMocks();
         $directory = [
             'newAccount' => 'https://acme-v02.api.letsencrypt.org/acme/new-acct',
             'newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce',
         ];
         $nonce = 'business-nonce-123';
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function (string $method) use ($directory, $nonce, &$callCount) {
+            ++$callCount;
 
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => [$nonce]])
-        ;
+            if (1 === $callCount) {
+                // Directory request
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
 
-        $this->httpClient->expects($this->exactly(2))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse)
-        ;
+            // Nonce request
+            return new MockResponse('', [
+                'http_code' => 200,
+                'response_headers' => ['replay-nonce' => $nonce],
+            ]);
+        });
 
         // 获取目录
         $directoryResult = $this->client->getDirectory();
@@ -305,19 +305,14 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testEdgeCasesEmptyDirectory(): void
     {
-        $this->initializeMocks();
         $emptyDirectory = [];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($emptyDirectory)
-        ;
-
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($directoryResponse)
-        ;
+        $this->setMockResponses([
+            new MockResponse(json_encode($emptyDirectory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+        ]);
 
         $result = $this->client->getDirectory();
 
@@ -326,22 +321,17 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testEdgeCasesLargeDirectory(): void
     {
-        $this->initializeMocks();
         $largeDirectory = array_fill_keys(
             array_map(fn ($i) => "endpoint_{$i}", range(1, 100)),
             'https://example.com/endpoint'
         );
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($largeDirectory)
-        ;
-
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($directoryResponse)
-        ;
+        $this->setMockResponses([
+            new MockResponse(json_encode($largeDirectory), [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+        ]);
 
         $result = $this->client->getDirectory();
 
@@ -351,11 +341,9 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testErrorHandlingNetworkTimeout(): void
     {
-        $this->initializeMocks();
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willThrowException(new \Exception('Connection timeout'))
-        ;
+        $this->setMockCallback(function () {
+            throw new \Exception('Connection timeout');
+        });
 
         $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('Failed to fetch ACME directory: Connection timeout');
@@ -365,27 +353,20 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testErrorHandlingInvalidJson(): void
     {
-        $this->initializeMocks();
-        $response = $this->createMock(ResponseInterface::class);
-        $response->expects($this->once())
-            ->method('toArray')
-            ->willThrowException(new \Exception('Invalid JSON'))
-        ;
-
-        $this->httpClient->expects($this->once())
-            ->method('request')
-            ->willReturn($response)
-        ;
+        $this->setMockResponses([
+            new MockResponse('invalid json {', [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]),
+        ]);
 
         $this->expectException(AbstractAcmeException::class);
-        $this->expectExceptionMessage('Failed to fetch ACME directory: Invalid JSON');
 
         $this->client->getDirectory();
     }
 
     public function testCreateAccount(): void
     {
-        $this->initializeMocks();
         $contacts = ['mailto:test@example.com'];
         $privateKeyPem = $this->generateTestPrivateKey();
 
@@ -400,57 +381,40 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
             'orders' => 'https://acme-v02.api.letsencrypt.org/acme/acct/123/orders',
         ];
 
-        // Mock directory response
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function (string $method) use ($directory, $nonce, $accountResponse, &$callCount) {
+            ++$callCount;
 
-        // Mock nonce response
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => [$nonce]])
-        ;
+            if (1 === $callCount) {
+                // Directory request
+                $this->assertEquals('GET', $method);
 
-        // Mock post response
-        $postResponse = $this->createMock(ResponseInterface::class);
-        $postResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($accountResponse)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getStatusCode')
-            ->willReturn(201)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['next-nonce']])
-        ;
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
+            if (2 === $callCount) {
+                // Nonce request
+                $this->assertEquals('HEAD', $method);
 
-        $this->httpClient->expects($this->exactly(3))
-            ->method('request')
-            ->willReturnCallback(function ($method, $url) use ($directoryResponse, $nonceResponse, $postResponse) {
-                /** @var int $callCount */
-                static $callCount = 0;
-                ++$callCount;
+                return new MockResponse('', [
+                    'http_code' => 200,
+                    'response_headers' => ['replay-nonce' => $nonce],
+                ]);
+            }
 
-                if (1 === $callCount) {
-                    $this->assertEquals('GET', $method);
+            // Account creation request
+            $this->assertEquals('POST', $method);
 
-                    return $directoryResponse;
-                }
-                if (2 === $callCount) {
-                    $this->assertEquals('HEAD', $method);
-
-                    return $nonceResponse;
-                }
-                $this->assertEquals('POST', $method);
-
-                return $postResponse;
-            })
-        ;
+            return new MockResponse(json_encode($accountResponse), [
+                'http_code' => 201,
+                'response_headers' => [
+                    'Content-Type' => 'application/json',
+                    'replay-nonce' => 'next-nonce',
+                ],
+            ]);
+        });
 
         $result = $this->client->createAccount($contacts, $privateKeyPem);
 
@@ -459,9 +423,10 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testCreateAccountWithInvalidPrivateKey(): void
     {
-        $this->initializeMocks();
         $contacts = ['mailto:test@example.com'];
         $invalidPrivateKey = 'invalid-private-key';
+
+        $this->setMockResponses([]);
 
         $this->expectException(AcmeValidationException::class);
         $this->expectExceptionMessage('Invalid private key provided');
@@ -471,7 +436,6 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testCreateAccountWithMultipleContacts(): void
     {
-        $this->initializeMocks();
         $contacts = ['mailto:admin@example.com', 'mailto:support@example.com'];
         $privateKeyPem = $this->generateTestPrivateKey();
 
@@ -484,36 +448,31 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
             'contact' => $contacts,
         ];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function () use ($directory, $accountResponse, &$callCount) {
+            ++$callCount;
 
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['test-nonce-multiple']])
-        ;
+            if (1 === $callCount) {
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
+            if (2 === $callCount) {
+                return new MockResponse('', [
+                    'http_code' => 200,
+                    'response_headers' => ['replay-nonce' => 'test-nonce-multiple'],
+                ]);
+            }
 
-        $postResponse = $this->createMock(ResponseInterface::class);
-        $postResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($accountResponse)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getStatusCode')
-            ->willReturn(201)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['next-nonce']])
-        ;
-
-        $this->httpClient->expects($this->exactly(3))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse, $postResponse)
-        ;
+            return new MockResponse(json_encode($accountResponse), [
+                'http_code' => 201,
+                'response_headers' => [
+                    'Content-Type' => 'application/json',
+                    'replay-nonce' => 'next-nonce',
+                ],
+            ]);
+        });
 
         $result = $this->client->createAccount($contacts, $privateKeyPem);
 
@@ -523,7 +482,6 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testCreateAccountWithEmptyContacts(): void
     {
-        $this->initializeMocks();
         $contacts = [];
         $privateKeyPem = $this->generateTestPrivateKey();
 
@@ -536,36 +494,31 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
             'contact' => [],
         ];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function () use ($directory, $accountResponse, &$callCount) {
+            ++$callCount;
 
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['test-nonce-empty']])
-        ;
+            if (1 === $callCount) {
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
+            if (2 === $callCount) {
+                return new MockResponse('', [
+                    'http_code' => 200,
+                    'response_headers' => ['replay-nonce' => 'test-nonce-empty'],
+                ]);
+            }
 
-        $postResponse = $this->createMock(ResponseInterface::class);
-        $postResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($accountResponse)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getStatusCode')
-            ->willReturn(201)
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['next-nonce']])
-        ;
-
-        $this->httpClient->expects($this->exactly(3))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse, $postResponse)
-        ;
+            return new MockResponse(json_encode($accountResponse), [
+                'http_code' => 201,
+                'response_headers' => [
+                    'Content-Type' => 'application/json',
+                    'replay-nonce' => 'next-nonce',
+                ],
+            ]);
+        });
 
         $result = $this->client->createAccount($contacts, $privateKeyPem);
 
@@ -575,7 +528,6 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
 
     public function testCreateAccountWithServerError(): void
     {
-        $this->initializeMocks();
         $contacts = ['mailto:test@example.com'];
         $privateKeyPem = $this->generateTestPrivateKey();
 
@@ -584,37 +536,28 @@ final class AcmeApiClientTest extends AbstractIntegrationTestCase
             'newNonce' => 'https://acme-v02.api.letsencrypt.org/acme/new-nonce',
         ];
 
-        $directoryResponse = $this->createMock(ResponseInterface::class);
-        $directoryResponse->expects($this->once())
-            ->method('toArray')
-            ->willReturn($directory)
-        ;
+        $callCount = 0;
+        $this->setMockCallback(function () use ($directory, &$callCount) {
+            ++$callCount;
 
-        $nonceResponse = $this->createMock(ResponseInterface::class);
-        $nonceResponse->expects($this->once())
-            ->method('getHeaders')
-            ->willReturn(['replay-nonce' => ['test-nonce-error']])
-        ;
+            if (1 === $callCount) {
+                return new MockResponse(json_encode($directory), [
+                    'http_code' => 200,
+                    'response_headers' => ['Content-Type' => 'application/json'],
+                ]);
+            }
+            if (2 === $callCount) {
+                return new MockResponse('', [
+                    'http_code' => 200,
+                    'response_headers' => ['replay-nonce' => 'test-nonce-error'],
+                ]);
+            }
 
-        $postResponse = $this->createMock(ResponseInterface::class);
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getStatusCode')
-            ->willReturn(500)
-        ;
-        $postResponse->expects($this->once())
-            ->method('getContent')
-            ->with(false)
-            ->willReturn('{"type":"urn:ietf:params:acme:error:serverInternal","detail":"Internal server error"}')
-        ;
-        $postResponse->expects($this->atLeastOnce())
-            ->method('getHeaders')
-            ->willReturn([])
-        ;
-
-        $this->httpClient->expects($this->exactly(3))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls($directoryResponse, $nonceResponse, $postResponse)
-        ;
+            return new MockResponse('{"type":"urn:ietf:params:acme:error:serverInternal","detail":"Internal server error"}', [
+                'http_code' => 500,
+                'response_headers' => ['Content-Type' => 'application/json'],
+            ]);
+        });
 
         $this->expectException(AbstractAcmeException::class);
         $this->expectExceptionMessage('Internal server error');

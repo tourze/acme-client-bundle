@@ -1,8 +1,39 @@
+parameters:
+  acme_server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'
+
 services:
   # default configuration for services in *this* file
   _defaults:
     autowire: true      # Automatically injects dependencies in your services.
     autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    public: true
 
-  Tourze\ACMEClientBundle\DataFixtures\:
-    resource: '../../DataFixtures/'
+  # Test environment: MockHttpClient for network isolation
+  test.acme_client.MockHttpClient:
+    class: Symfony\Component\HttpClient\MockHttpClient
+    public: true
+
+  # Test alias for MockHttpClient class
+  Test.MockHttpClient:
+    alias: test.acme_client.MockHttpClient
+    public: true
+
+  # Test alias for HttpClientInterface
+  Test.HttpClientInterface:
+    alias: test.acme_client.MockHttpClient
+    public: true
+
+  # Test service for AcmeApiClient
+  Test.AcmeApiClient:
+    class: Tourze\ACMEClientBundle\Service\AcmeApiClient
+    arguments:
+      $httpClient: '@test.acme_client.MockHttpClient'
+      $directoryUrl: '%acme_server_url%'
+    public: true
+
+  # Test service for AccountService
+  Test.AccountService:
+    class: Tourze\ACMEClientBundle\Service\AccountService
+    arguments:
+      $acmeServerUrl: '%acme_server_url%'
+    public: true

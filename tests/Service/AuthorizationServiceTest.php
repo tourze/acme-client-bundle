@@ -30,8 +30,7 @@ final class AuthorizationServiceTest extends AbstractIntegrationTestCase
 {
     private AuthorizationService $service;
 
-    /** @var AcmeApiClient&MockObject */
-    private AcmeApiClient $apiClient;
+    private MockObject $apiClient;
 
     protected function onSetUp(): void
     {

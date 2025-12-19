@@ -11,7 +11,7 @@ use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
 use Tourze\ACMEClientBundle\Service\LogDisplayService;
 use Tourze\ACMEClientBundle\Service\LogQueryService;
 
-class OperationQueryHandler implements QueryHandlerInterface
+final class OperationQueryHandler implements QueryHandlerInterface
 {
     public function __construct(
         private readonly LogQueryService $logQueryService,

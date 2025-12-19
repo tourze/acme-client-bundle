@@ -12,7 +12,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\ACMEClientBundle\Controller\Admin\AcmeOperationLogCrudController;
-use Tourze\ACMEClientBundle\DataFixtures\AcmeOperationLogFixtures;
 use Tourze\ACMEClientBundle\Entity\AcmeOperationLog;
 use Tourze\ACMEClientBundle\Enum\LogLevel;
 use Tourze\PHPUnitSymfonyWebTest\AbstractEasyAdminControllerTestCase;
@@ -33,12 +32,16 @@ final class AcmeOperationLogCrudControllerTest extends AbstractEasyAdminControll
         /** @var ObjectManager $entityManager */
         $entityManager = $container->get('doctrine.orm.entity_manager');
 
-        // 检查是否已有数据，如果没有则加载 fixtures
+        // 检查是否已有数据，如果没有则创建基础数据
         $repository = $entityManager->getRepository(AcmeOperationLog::class);
         $existingLogs = method_exists($repository, 'count') ? $repository->count() : count($repository->findAll());
         if (0 === $existingLogs) {
-            $fixtures = new AcmeOperationLogFixtures();
-            $fixtures->load($entityManager);
+            $log = new AcmeOperationLog();
+            $log->setLevel(LogLevel::INFO);
+            $log->setOperation('test_operation');
+            $log->setMessage('Test log message');
+            $entityManager->persist($log);
+            $entityManager->flush();
         }
     }
 
@@ -113,7 +116,7 @@ final class AcmeOperationLogCrudControllerTest extends AbstractEasyAdminControll
     {
         $this->assertEquals(
             'Tourze\ACMEClientBundle\Controller\Admin',
-            new \ReflectionClass(AcmeOperationLogCrudController::class)->getNamespaceName()
+            (new \ReflectionClass(AcmeOperationLogCrudController::class))->getNamespaceName()
         );
     }
 

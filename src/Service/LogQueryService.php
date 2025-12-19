@@ -11,11 +11,11 @@ use Tourze\ACMEClientBundle\Exception\AbstractAcmeException;
 use Tourze\ACMEClientBundle\Exception\AcmeOperationException;
 
 #[Autoconfigure(public: true)]
-final class LogQueryService
+final readonly class LogQueryService
 {
     public function __construct(
-        private readonly AcmeLogService $logService,
-        private readonly AcmeExceptionService $exceptionService,
+        private AcmeLogService $logService,
+        private AcmeExceptionService $exceptionService,
     ) {
     }
 
